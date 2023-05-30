@@ -1,0 +1,2 @@
+- copy precommit scripts for nocheckin
+- translate build scripts to shell?
