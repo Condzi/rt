@@ -1,0 +1,8 @@
+Logger initialized!
+!!! Check failed!
+!!! 	false
+!!! W:\pwr\engineering-thesis\rt\code\first.cpp:13
+!!! Debug check failed!
+!!! 	false
+!!! W:\pwr\engineering-thesis\rt\code\first.cpp:14
+Goodbye :)

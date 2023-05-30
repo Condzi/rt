@@ -1,0 +1,1 @@
+#define RT_LOG_FILE "log.txt"

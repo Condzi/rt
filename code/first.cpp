@@ -1,10 +1,20 @@
 #include <cstdio>
+#include <cstdlib>
 
-#include <Windows.h>
+#include "first.hpp"
+
+#include "config.hpp"
 
 int 
 main(void) {
-  ::puts("Hello, World!");
+  g_LogFile = fopen(RT_LOG_FILE, "w");
 
+  logf("Logger initialized!\n");
+  check_(false);
+  dbg_check_(false);
+
+  logf("Goodbye :)");
+  fflush(g_LogFile);
+  
   return 0;
 }
