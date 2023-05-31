@@ -65,3 +65,6 @@ struct String {
       }                                                 \
     } while (false)
 #endif
+
+template <typename ...TArgs> [[noreturn]] void
+errf(char const *fmt, TArgs ...args);

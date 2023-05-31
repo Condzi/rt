@@ -27,7 +27,7 @@ alloc_perm(s64 size) {
 
   void *mem = ::malloc(size);
   if (!mem) {
-    // @todo errf
+    errf("::malloc failed, size=%lld", size);
   }
 
   ::memset(mem, 0, size);
@@ -55,7 +55,7 @@ get_temp_mem_mark() {
   return gMemory_State.temp_mark;
 }
 
-void
+voidg
 pop_temp_mem_mark(s64 size) {
   dbg_check_(size >= 0 && size <= gMemory_State.temp_mark);
 
