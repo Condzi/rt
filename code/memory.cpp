@@ -55,7 +55,7 @@ get_temp_mem_mark() {
   return gMemory_State.temp_mark;
 }
 
-voidg
+void
 pop_temp_mem_mark(s64 size) {
   dbg_check_(size >= 0 && size <= gMemory_State.temp_mark);
 

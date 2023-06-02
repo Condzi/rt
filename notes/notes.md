@@ -1,9 +1,3 @@
-- asserts
-  - debug_check_ -- eveluated only in debug mode, check_ -- evaluated always
-- permanent allocator
-- temporary allocator
-- basic string manipulation utilities
-- logger
 - file i/o
 
 - seh

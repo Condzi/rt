@@ -66,5 +66,9 @@ struct String {
     } while (false)
 #endif
 
-template <typename ...TArgs> [[noreturn]] void
+#define RT_KILOBYTES(x) (x*1024)
+#define RT_MEGABYTES(x) (RT_KILOBYTES(x)*1024)
+
+template <typename ...TArgs> 
+[[noreturn]] void
 errf(char const *fmt, TArgs ...args);

@@ -6,17 +6,34 @@
 
 #include "config.hpp"
 #include "memory.hpp"
+#include "string.hpp"
+#include "os.hpp"
+
+// WinApi Headers {
+  #define NOMINMAX
+  #define WIN32_LEAN_AND_MEAN
+  #include <Windows.h>
+  #include <hidusage.h>
+// } WinApi Headers
 
 #include "memory.cpp"
+#include "string.cpp"
+#include "os.cpp"
+
 
 using namespace rt;
 
-template <typename ...TArgs> [[noreturn]] void
+template <typename ...TArgs> 
+[[noreturn]] void
 errf(char const *fmt, TArgs ...args) {
-  // @Todo: print last OS error here.
+  u32 const last_error = os_get_last_error();
+  String const last_error_str = os_error_to_string(last_error);
+
   logf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-  logf("\tFatal error!\n  ");
+  logf("        Fatal error!\n    ");
   logf(fmt, args...);
+  logf("\n\nLast OS error:\n        %.*s\n",
+       (s32)last_error_str.count, last_error_str.data);
   logf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
   ::fflush(stdout);
@@ -38,8 +55,8 @@ main(void) {
   check_(false);
   dbg_check_(false);
 
-  logf("Goodbye :)");
+  logf("Goodbye :)\n");
   fflush(gLog_File);
   
-  return 0;
+  greturn 0;
 }
