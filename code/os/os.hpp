@@ -13,9 +13,16 @@ os_get_last_error();
 */
 [[nodiscard]] Buffer
 os_read_entire_file_or_panic(char const *path);
-// os_write_entire_file_or_panic
-// os_append_to_file_or_panic
-// os_move_file_or_panic
+
+void
+os_write_entire_file_or_panic(Buffer content, char const *path);
+
+void
+os_append_to_file_or_panic(Buffer content, char const *path);
+
+void
+os_move_file_or_panic(char const *src, char const *dst);
+
 // pathf?
 
 /**

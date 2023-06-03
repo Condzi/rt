@@ -39,7 +39,7 @@ errf(char const *fmt, TArgs ...args) {
 
   ::fflush(stdout);
   ::fflush(gLog_File);
-  ::exit(0);
+  ::exit(1);
 }
 
 int 
