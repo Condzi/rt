@@ -21,6 +21,7 @@ Estimated time: ~4 Months: June - October.
 - [ ] Editor
 - [ ] Profiling 
 - [ ] Optimizing
+- [ ] Collision detection
 
 # October
 Writing the thesis document.
