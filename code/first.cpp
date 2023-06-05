@@ -52,7 +52,12 @@ main(void) {
     errf("init_memory");
   }
 
-  check_(false);
+  String_Builder sb;
+
+  check_(sb.data != NULL);
+  check_(sb.size == 0);
+  check_(sb.reserved == 128);
+
   dbg_check_(false);
 
   logf("Goodbye :)\n");

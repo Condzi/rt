@@ -37,7 +37,7 @@ alloc_perm(s64 size) {
 [[nodiscard]] void* 
 alloc_temp(s64 size) {
   dbg_check_(size > 0);
-  dbg_check_(gMemory_State.temp_mark + size > TEMP_MEM_SIZE);
+  dbg_check_(gMemory_State.temp_mark + size < TEMP_MEM_SIZE);
 
   if (gMemory_State.temp_mark + size > TEMP_MEM_SIZE) {
     return alloc_perm(size);

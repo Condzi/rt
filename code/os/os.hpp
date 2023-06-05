@@ -12,6 +12,21 @@ os_get_last_error();
 // write_minidump()
 
 /**
+ * Debugging
+*/
+
+/*
+[[nodiscard]] bool
+os_is_debugger_present();
+
+void
+os_print_to_debugger(char const *msg);
+
+void
+os_put_breakpoint_here();
+*/
+
+/**
  * File I/O
 */
 [[nodiscard]] Buffer
