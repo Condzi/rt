@@ -241,8 +241,27 @@ os_get_app_uptime() {
 // hh:mm:ss, count=const=8.
 [[nodiscard]] String
 os_get_app_uptime_as_string() {
-  // @Todo: implement with String_Builder
-  return {};
+  s32 seconds = (s32)os_get_app_uptime();
+	s32 minutes = seconds/60;
+	s32 hours   = minutes/60;
+
+	minutes %= 60;
+	seconds %= 60;
+
+	String_Builder sb;
+  {
+    if (hours < 10)   appendf(sb, "%s", "0");
+    appendf(sb, "%d:", hours);
+
+    if (minutes < 10) appendf(sb, "%s", "0");
+    appendf(sb, "%d:", minutes);
+
+    if (seconds < 10) appendf(sb, "%s", "0");
+    appendf(sb, "%d", seconds);
+  }
+
+	String result = to_string(sb);
+  return result;
 }
 
 [[nodiscard]] Time_of_Day
