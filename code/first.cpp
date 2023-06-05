@@ -49,8 +49,7 @@ main(void) {
   logf("Logger initialized!\n");
 
   if (!init_memory()) {
-    logf("init_memory failed\n"); // @todo: errf
-    return 1;
+    errf("init_memory");
   }
 
   check_(false);

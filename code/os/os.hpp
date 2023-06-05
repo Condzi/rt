@@ -8,6 +8,9 @@ os_error_to_string(u32 error_code);
 [[nodiscard]] u32
 os_get_last_error();
 
+// register_vectored_exception_handler();
+// write_minidump()
+
 /**
  * File I/O
 */

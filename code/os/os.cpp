@@ -20,9 +20,16 @@ os_error_to_string(u32 error_code) {
   //        
   //                                                        - kkubacki, 2nd June 2023
   //
-  ::DWORD constexpr LANG  = 0;
-  ::DWORD const     msg_len = ::FormatMessageA(FLAGS, NULL, (::DWORD)error_code, LANG, 
-                                               buff, BUFF_SIZE, NULL);
+  ::DWORD constexpr LANG    = 0;
+  ::DWORD const     msg_len = ::FormatMessageA(
+                                  FLAGS, 
+                                  NULL, 
+                                  (::DWORD)error_code, 
+                                  LANG, 
+                                  buff, 
+                                  BUFF_SIZE, 
+                                  NULL
+                                  );
 
   String result;
   if (msg_len == 0) {
@@ -75,7 +82,14 @@ os_read_entire_file_or_panic(char const *path) {
     errf("Failed to create mapping of file '%s'", path);
   }
 
-  void *view = ::MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
+  void *view = ::MapViewOfFile(
+                  mapping, 
+                  FILE_MAP_READ, 
+                  0, 
+                  0, 
+                  0
+                  );
+                  
   if (view == NULL) {
     errf("Failed to map file '%s'", path);
   }
@@ -138,7 +152,7 @@ os_write_entire_file_or_panic(Buffer content, char const *path) {
 
 void
 os_append_to_file_or_panic(Buffer content, char const *path) {
-    check_(path);
+  check_(path);
   check_(content.count >= 0);
   check_(content.bytes != NULL);
 
@@ -198,7 +212,7 @@ struct alignas(8) Win32_Timer {
 
 // NOTE(konrad): some people reported that indeed QueryPerformanceX can return 0, 
 //               if passed params are not aligned to 8 or 4 bytes. I couldn't 
-//               reproduce it, but I left these just in case.
+//               reproduce it, but I left thid just in case.
 //  
 //                                                        - kkubacki, 3rd June 2023
 static_assert(alignof(Win32_Timer) == 8);
