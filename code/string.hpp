@@ -6,6 +6,18 @@ struct String_Builder final {
 };
 
 
+template <typename ...TArgs>
+void 
+appendf(String_Builder &sb, char const *fmt, TArgs ...args);
+
+void
+append(String_Builder &sb, String const &string);
+
+[[nodiscard]] String
+to_string(String_Builder &sb);
+
+void
+resize_if_needed(String_Builder &sb, s64 size);
 
 template <typename ...TArgs>
 [[nodiscard]] String

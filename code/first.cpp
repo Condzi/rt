@@ -54,6 +54,11 @@ main(void) {
 
   String_Builder sb;
 
+  appendf(sb, "Hello, %s!\n", "World");
+  String str = to_string(sb);
+
+  logf("Message: %s", as_cstr(str));
+
   check_(sb.data != NULL);
   check_(sb.size == 0);
   check_(sb.reserved == 128);
