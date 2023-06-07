@@ -15,6 +15,10 @@
   #define WIN32_LEAN_AND_MEAN
   #include <Windows.h>
   #include <hidusage.h>
+  // MiniDump {
+    #include <Dbghelp.h> 
+    #pragma comment(lib, "Dbghelp.lib")
+  // } MiniDump
 // } WinApi Headers
 
 #include "memory.cpp"

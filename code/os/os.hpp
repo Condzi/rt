@@ -8,23 +8,31 @@ os_error_to_string(u32 error_code);
 [[nodiscard]] u32
 os_get_last_error();
 
-// register_vectored_exception_handler();
-// write_minidump()
+// @Note: VEH is added only when debugger is not present because otherwise we trap
+//        debugger related exceptions.
+void 
+os_register_vectored_exception_handler();
 
 /**
  * Debugging
 */
 
-/*
 [[nodiscard]] bool
-os_is_debugger_present();
+os_is_debugger_present() {
+  // @Todo
+  return false;
+}
 
 void
-os_print_to_debugger(char const *msg);
+os_print_to_debugger(char const *msg) {
+  // @Todo
+  (void)msg;
+}
 
 void
-os_put_breakpoint_here();
-*/
+os_put_breakpoint_here() {
+  // @Todo
+}
 
 /**
  * File I/O
