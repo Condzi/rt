@@ -9,8 +9,8 @@ appendf(String_Builder &sb, char const *fmt, TArgs ...args) {
 
   if constexpr (sizeof...(TArgs) == 0) {
     String const string {
-      .data = fmt,
-      .count = (s64)::strlen(fmt)
+      .count = (s64)::strlen(fmt),
+      .data = as_cstr(tprint("fmt")) // @Hack: can't assign const char* to char*
     };
 
     append(sb, string);

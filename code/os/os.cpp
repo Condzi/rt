@@ -124,15 +124,15 @@ write_minidump(::EXCEPTION_POINTERS *ex_ptrs) {
                        );
 
 	if (file == INVALID_HANDLE_VALUE) {
-		logf("Failed to create file for MiniDump! (\"%s\")", );
-    reutrn false;
+		logf("Failed to create file for MiniDump! (\"%s\")\n", dump_path);
+    return false;
 	} 
   
-  logf("Writing MiniDump...");
+  logf("Writing MiniDump...\n");
 
   ::MINIDUMP_EXCEPTION_INFORMATION MiniDumpInfo {
     .ThreadId = ::GetCurrentThreadId(),
-    .ExceptionPointers = exInfo,
+    .ExceptionPointers = ex_ptrs,
     .ClientPointers = false
   };
 
@@ -148,12 +148,11 @@ write_minidump(::EXCEPTION_POINTERS *ex_ptrs) {
 	::CloseHandle(file);
 
   if (success) {
-			logf("MiniDump succesfully saved to \"%s\"!", MiniDumpPath);
-		} else {
-      // @Robustness: check if MiniDumpWriteDump set the GetLastError value.
-			logf("Failed to write MiniDump!");
-		}
-	}
+    logf("MiniDump succesfully saved to \"%s\"!\n", dump_path);
+  } else {
+    // @Robustness: check if MiniDumpWriteDump set the GetLastError value.
+    logf("Failed to write MiniDump!\n");
+  }
 
   return (bool)success;
 }
@@ -189,7 +188,7 @@ vectored_exception_handler_proc(::EXCEPTION_POINTERS *ex_ptrs) {
 	char const *user_msg = as_cstr(to_string(sb));
 	// ShutdownLog();
 	// NOTE(konrad): for simplicity, we use ASCII version of MessageBox.
-	::MessageBoxA(NULL, user_msg " Crash :(", MB_OK | MB_ICONERROR);
+	::MessageBoxA(NULL, user_msg, " Crash :(", MB_OK | MB_ICONERROR);
 	::ExitProcess(2);
 }
 
