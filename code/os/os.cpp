@@ -204,6 +204,26 @@ os_register_vectored_exception_handler() {
   logf("VEH: enabled\n");
 }
 
+/**
+ * Debugging
+*/
+
+[[nodiscard]] bool
+os_is_debugger_present() {
+  return ::IsDebuggerPresent();
+}
+
+void
+os_print_to_debugger(char const *msg) {
+  // @Unicode
+  ::OutputDebugStringA(msg);
+}
+
+void
+os_put_breakpoint_here() {
+  ::__debugbreak();
+}
+
 
 [[nodiscard]] Buffer
 os_read_entire_file_or_panic(char const *path) {

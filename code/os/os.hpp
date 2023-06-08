@@ -18,21 +18,13 @@ os_register_vectored_exception_handler();
 */
 
 [[nodiscard]] bool
-os_is_debugger_present() {
-  // @Todo
-  return false;
-}
+os_is_debugger_present();
 
 void
-os_print_to_debugger(char const *msg) {
-  // @Todo
-  (void)msg;
-}
+os_print_to_debugger(char const *msg);
 
 void
-os_put_breakpoint_here() {
-  // @Todo
-}
+os_put_breakpoint_here();
 
 /**
  * File I/O
