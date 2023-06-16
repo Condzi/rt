@@ -34,7 +34,7 @@ append(String_Builder &sb, String const &string) {
 
   resize_if_needed(sb, string.count);
 
-  ::memcpy(sb.data + sb.size, sb.data, string.count);
+  ::memcpy(sb.data + sb.size, string.data, string.count);
   sb.size += string.count;
 }
 
@@ -43,6 +43,19 @@ to_string(String_Builder &sb) {
   check_(sb.data != NULL);
 
   char *buffer = (char*)alloc_temp(sb.size);
+  ::memcpy(buffer, sb.data, sb.size);
+
+  return {
+    .count = sb.size,
+    .data = buffer
+  };
+}
+
+[[nodiscard]] String
+to_perm_string(String_Builder &sb) {
+  check_(sb.data != NULL);
+
+  char *buffer = (char*)alloc_perm(sb.size);
   ::memcpy(buffer, sb.data, sb.size);
 
   return {

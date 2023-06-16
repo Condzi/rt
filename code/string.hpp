@@ -16,6 +16,9 @@ append(String_Builder &sb, String const &string);
 [[nodiscard]] String
 to_string(String_Builder &sb);
 
+[[nodiscard]] String
+to_perm_string(String_Builder &sb);
+
 void
 resize_if_needed(String_Builder &sb, s64 size);
 

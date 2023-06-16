@@ -45,6 +45,8 @@ main(void) {
     errf("init_memory");
   }
 
+  os_init_filesystem();
+
   String_Builder sb;
 
   appendf(sb, "Hello, %s!\n", "World");
