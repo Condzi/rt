@@ -20,7 +20,7 @@ using namespace rt;
 template <typename ...TArgs> 
 [[noreturn]] void
 errf(char const *fmt, TArgs ...args) {
-  u32 const last_error = os_get_last_error();
+  u32    const last_error     = os_get_last_error();
   String const last_error_str = os_error_to_string(last_error);
 
   logf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");

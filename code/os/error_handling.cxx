@@ -142,10 +142,10 @@ is_exception_important(::UINT ex_code) {
 
 [[nodiscard]] bool
 write_minidump(::EXCEPTION_POINTERS *ex_ptrs) {
-  // @todo: use pathf!
-  char dump_path[] = "dump.dmp";
+  // @Copypasta
+  String path = pathf("%l\\minidump.dmp");
   ::HANDLE file;
-	file = ::CreateFileA(dump_path, 
+	file = ::CreateFileA(as_cstr(path), 
                        GENERIC_WRITE,
                        FILE_SHARE_READ, 
                        NULL,
@@ -155,7 +155,8 @@ write_minidump(::EXCEPTION_POINTERS *ex_ptrs) {
                        );
 
 	if (file == INVALID_HANDLE_VALUE) {
-		logf("Failed to create file for MiniDump! (\"%s\")\n", dump_path);
+		logf("Failed to create file for MiniDump! (\"%.*s\")\n",
+         (int)path.count, path.data);
     return false;
 	} 
   
@@ -179,7 +180,7 @@ write_minidump(::EXCEPTION_POINTERS *ex_ptrs) {
 	::CloseHandle(file);
 
   if (success) {
-    logf("MiniDump succesfully saved to \"%s\"!\n", dump_path);
+    logf("MiniDump succesfully saved to \"%.*s\"!\n", (int)path.count, path.data);
   } else {
     // @Robustness: check if MiniDumpWriteDump set the GetLastError value.
     logf("Failed to write MiniDump!\n");
@@ -208,10 +209,13 @@ vectored_exception_handler_proc(::EXCEPTION_POINTERS *ex_ptrs) {
 
   String_Builder sb;
   appendf(sb, "Engine has encountered a problem.\r\n\r\n");
-	appendf(sb, "You can find the log file in:\r\n\t%s.\r\n\r\n", "todo"); // @Todo: use pathf!!
+	appendf(sb, "You can find the log file in:\r\n\t%.*s.\r\n\r\n", 
+          (int)gPath_Cache.logs.count, gPath_Cache.logs.data);
 
 	if (dump_written) {
-		appendf(sb, "Minidump written to:\r\n\t%s.", "todo"); // @Todo: use pathf!
+    // @Copypasta
+    String path = pathf("%l\\minidump.dmp");
+		appendf(sb, "Minidump written to:\r\n\t%.*s.", (int)path.count, path.data);
 	} else {
 		appendf(sb, "MiniDump not created. See logs for the reason.");
 	}
