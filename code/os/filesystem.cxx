@@ -81,14 +81,14 @@ os_write_entire_file_or_panic(Buffer content, char const *path) {
   }
   
   ::DWORD const bytes_to_write = (::DWORD)content.count;
-  ::DWORD bytes_written = 0;
-  ::BOOL const success = ::WriteFile(
-                           file, 
-                           content.bytes, 
-                           bytes_to_write, 
-                           &bytes_written, 
-                           NULL
-                           );
+  ::DWORD       bytes_written = 0;
+  ::BOOL  const success = ::WriteFile(
+                             file, 
+                             content.bytes, 
+                             bytes_to_write, 
+                             &bytes_written, 
+                             NULL
+                             );
 
   if (!success) {
     errf("Failed to write to file '%s'", path);
@@ -123,14 +123,14 @@ os_append_to_file_or_panic(Buffer content, char const *path) {
   }
   
   ::DWORD const bytes_to_write = (::DWORD)content.count;
-  ::DWORD bytes_written = 0;
-  ::BOOL const success = ::WriteFile(
-                           file, 
-                           content.bytes, 
-                           bytes_to_write, 
-                           &bytes_written, 
-                           NULL
-                           );
+  ::DWORD       bytes_written = 0;
+  ::BOOL  const success = ::WriteFile(
+                             file, 
+                             content.bytes, 
+                             bytes_to_write, 
+                             &bytes_written, 
+                             NULL
+                             );
 
   if (!success) {
     errf("Failed to append to file '%s'", path);
@@ -264,7 +264,7 @@ pathf(char const *fmt) {
 				append(sb, gPath_Cache.models);
 			} break;
 
-			default: { // NOTE(konrad): ignore unknown specifiers
+			default: {
 				errf("pathf: unknown specifier '%%%c'.", fmt[i + 1]);
 			} break; 
 		}

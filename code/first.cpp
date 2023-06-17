@@ -43,6 +43,7 @@ main(void) {
     errf("init_memory");
   }
 
+  os_start_app_timer();
   os_init_filesystem();
 
   String_Builder sb;

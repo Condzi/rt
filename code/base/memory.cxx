@@ -12,7 +12,6 @@ init_memory() {
     return false;
   }
 
-  ::memset(&gMemory_State, 0, sizeof(gMemory_State));
   ::memset(temp_memory_from_system, 0, TEMP_MEM_SIZE);
 
   gMemory_State.temp_memory.count = TEMP_MEM_SIZE;
