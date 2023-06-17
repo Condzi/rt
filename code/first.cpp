@@ -6,12 +6,10 @@
 #include "first.hpp"
 
 #include "config.hpp"
-#include "memory.hpp"
-#include "string.hpp"
+#include "base/base.hpp"
 #include "os/os.hpp"
 
-#include "memory.cpp"
-#include "string.cpp"
+#include "base/base.cpp"
 #include "os/os.cpp"
 
 
