@@ -50,7 +50,7 @@ main(void) {
   String_Builder sb;
 
   appendf(sb, "Hello, %s!\n", "World");
-  String str = to_string(sb);
+  String str = to_temp_string(sb);
 
   logf("Message: %s", as_cstr(str));
 

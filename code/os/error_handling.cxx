@@ -220,7 +220,7 @@ vectored_exception_handler_proc(::EXCEPTION_POINTERS *ex_ptrs) {
 		appendf(sb, "MiniDump not created. See logs for the reason.");
 	}
 
-	char const *user_msg = as_cstr(to_string(sb));
+	char const *user_msg = as_cstr(to_temp_string(sb));
 	// ShutdownLog();
 	// NOTE(konrad): for simplicity, we use ASCII version of MessageBox.
 	::MessageBoxA(NULL, user_msg, " Crash :(", MB_OK | MB_ICONERROR);

@@ -54,7 +54,7 @@ os_get_app_uptime_as_string() {
     appendf(sb, "%d", seconds);
   }
 
-	String result = to_string(sb);
+	String result = to_temp_string(sb);
   return result;
 }
 

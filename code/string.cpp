@@ -39,7 +39,7 @@ append(String_Builder &sb, String const &string) {
 }
 
 [[nodiscard]] String
-to_string(String_Builder &sb) {
+to_temp_string(String_Builder &sb) {
   check_(sb.data != NULL);
 
   char *buffer = (char*)alloc_temp(sb.size);
