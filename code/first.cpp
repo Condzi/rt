@@ -2,14 +2,17 @@
 #include <cstdlib>
 #include <cstring>
 #include <cfloat>
+#include <cmath>
 
 #include "first.hpp"
 
 #include "config.hpp"
 #include "base/base.hpp"
+#include "math/math.hpp"
 #include "os/os.hpp"
 
 #include "base/base.cpp"
+#include "math/math.cpp"
 #include "os/os.cpp"
 
 
@@ -36,6 +39,10 @@ errf(char const *fmt, TArgs ...args) {
 int 
 main(void) {
   gLog_File = fopen(RT_LOG_FILE, "w");
+
+  Vec2 vec2{1,1};
+  vec2 = Vec2{2,2};
+  Vec4 vec{.xy = vec2};
 
   logf("Logger initialized!\n");
 

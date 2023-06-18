@@ -69,6 +69,9 @@ struct String {
 #define RT_KILOBYTES(x) (x*1024)
 #define RT_MEGABYTES(x) (RT_KILOBYTES(x)*1024)
 
+#define mem_comp_ ::memcmp
+#define mem_copy_ ::memcpy
+
 template <typename ...TArgs> 
 [[noreturn]] void
 errf(char const *fmt, TArgs ...args);
