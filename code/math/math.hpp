@@ -1,4 +1,5 @@
 #include "vec.hxx"
+#include "mat.hxx"
 
 namespace rt {
 [[nodiscard]] bool

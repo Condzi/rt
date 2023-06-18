@@ -16,14 +16,20 @@ Main ideas:
 - no need to write own formatting for everything, just handle our String separately
   and forward other arguments to libc sprintf.
 
+# Unit tests
+Use ChatGPT for generating UTs for math functions & other code. Maybe roll out our
+own simple UT library and add the testing as a step in GitHub pipeline?
+
 # To do / priority
 - math: vectors, matrices + unit tests for them!
+  - this is just for the 2D part (debug shapes / textures), for 3D we'll need more
+    stuff
 
 - window creation
 - DirectX 11 immediate pipeline
   - simple texture rendering (for CPU raytraycer)
   - 2D debug shapes
-  - 3D debug shapes?!
+  - 3D debug shapes?! -- need 3D math
 - UTF-8, use String everywhere & rewrite the tprint to accept it.
 
 - hw info (simd availability, threads) from Agner Fog

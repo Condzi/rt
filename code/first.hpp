@@ -72,6 +72,18 @@ struct String {
 #define mem_comp_ ::memcmp
 #define mem_copy_ ::memcpy
 
+namespace rt {
+template <typename T>
+void rt_swap(T &a, T &b) {
+	size_t constexpr static size = sizeof(T);
+	u8 buf[size];
+  
+	mem_copy_(buf, &a,  size);
+	mem_copy_(&a,  &b,  size);
+	mem_copy_(&b,  buf, size);
+}
+}
+
 template <typename ...TArgs> 
 [[noreturn]] void
 errf(char const *fmt, TArgs ...args);
