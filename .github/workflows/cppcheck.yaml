@@ -16,6 +16,7 @@ jobs:
     - name: Install cppcheck
       run: |
         sudo apt-get install cppcheck
+        cppcheck --version
 
     - name: Run cppcheck
       run: |
