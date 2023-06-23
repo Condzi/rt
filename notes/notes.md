@@ -1,6 +1,6 @@
 # Cppcheck?
 CppCheck gives false positives about snprintf. Maybe it would be better to have
-clang-tidy or something similar, instead. SonarQube would be dope.
+clang-tidy or something simillar, instead. SonarQube would be dope.
 
 # Panic
 I see that often we have "if (!x) errf(...)" pattern ("panic" situations).
@@ -21,10 +21,6 @@ Use ChatGPT for generating UTs for math functions & other code. Maybe roll out o
 own simple UT library and add the testing as a step in GitHub pipeline?
 
 # To do / priority
-- math: vectors, matrices + unit tests for them!
-  - this is just for the 2D part (debug shapes / textures), for 3D we'll need more
-    stuff
-
 - window creation
 - DirectX 11 immediate pipeline
   - simple texture rendering (for CPU raytraycer)
@@ -34,4 +30,5 @@ own simple UT library and add the testing as a step in GitHub pipeline?
 
 - hw info (simd availability, threads) from Agner Fog
 
+- unit test for math module
 - translate build scripts to shell?
