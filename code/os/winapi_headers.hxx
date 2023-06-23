@@ -16,7 +16,7 @@
 #define OEMRESOURCE       // OEM Resource values
 // #define NOATOM            // Atom Manager routines
 // #define NOCLIPBOARD       // Clipboard routines
-#define NOCOLOR           // Screen colors
+// #define NOCOLOR           // Screen colors
 // #define NOCTLMGR          // Control and Dialog routines
 #define NODRAWTEXT        // DrawText() and DT_*
 // #define NOGDI             // All GDI defines and routines
@@ -44,6 +44,7 @@
 #define NOMINMAX
 
 #include <Windows.h>
+#include <WinUser.h>
 
 #include <debugapi.h> // __debugbreak, OutputDebugString
 // MiniDump {

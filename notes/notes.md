@@ -20,6 +20,14 @@ Main ideas:
 Use ChatGPT for generating UTs for math functions & other code. Maybe roll out our
 own simple UT library and add the testing as a step in GitHub pipeline?
 
+# Window procedure
+Window procedure handles (mainly) 3 types of messages: window-related, input-related 
+and rendering-related (special case of win-related, for example window resizing).
+The idea now is that we have a one, main handler, which calls subhandlers from
+different modules (window module, input module and rendering module). If the sub-handlers
+don't handle the message, we fallback to the default window handler and that's it.
+This will prevent the window module from being too specific / tied to other modules.
+
 # To do / priority
 - window creation
 - DirectX 11 immediate pipeline

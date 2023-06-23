@@ -8,6 +8,10 @@ union Vec2 {
     f32 x, y;
   };
 
+  struct {
+    f32 width, height;
+  };
+
   f32 v[2] = {};
 };
 
