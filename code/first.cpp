@@ -10,10 +10,12 @@
 #include "base/base.hpp"
 #include "math/math.hpp"
 #include "os/os.hpp"
+#include "window/window.hpp"
 
 #include "base/base.cpp"
 #include "math/math.cpp"
 #include "os/os.cpp"
+#include "window/window.cpp"
 
 
 using namespace rt;
