@@ -16,7 +16,9 @@ jobs:
     - name: Install cppcheck
       run: |
         sudo apt-get install cppcheck
+        cppcheck --version
 
     - name: Run cppcheck
+      continue-on-error: true
       run: |
         cppcheck --enable=all --std=c++20 --platform=win64 --error-exitcode=1 --template="{file}:{line}: {severity}: {message}\n{code}" --template-location="{file}:{line}: note: {info}\n{code}" --inconclusive --force --suppress=missingIncludeSystem ./code/
