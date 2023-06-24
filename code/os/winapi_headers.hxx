@@ -52,6 +52,16 @@
   #pragma comment(lib, "Dbghelp.lib")
 // } MiniDump
 
+// DirectX 11 {
+  #include <d3d11.h>       // D3D interface
+  #include <dxgi.h>        // DirectX driver interface
+  #include <d3dcompiler.h> // shader compiler
+
+  #pragma comment( lib, "d3d11.lib" )       // direct3D library
+  #pragma comment( lib, "dxgi.lib" )        // directx graphics interface
+  #pragma comment( lib, "d3dcompiler.lib" ) // shader compiler
+// DirectX 11}
+
 // near/far pointers O.O!
 #undef near
 #undef far
