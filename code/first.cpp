@@ -10,10 +10,12 @@
 #include "base/base.hpp"
 #include "math/math.hpp"
 #include "os/os.hpp"
+#include "window/window.hpp"
 
 #include "base/base.cpp"
 #include "math/math.cpp"
 #include "os/os.cpp"
+#include "window/window.cpp"
 
 
 using namespace rt;
@@ -52,6 +54,7 @@ main(void) {
 
   os_start_app_timer();
   os_init_filesystem();
+  window_create_or_panic();
 
   String_Builder sb;
 
@@ -66,8 +69,13 @@ main(void) {
 
   dbg_check_(false);
 
+  while(!window_is_closed()) {
+    win32_message_loop();
+  }
+  
   logf("Goodbye :)\n");
   fflush(gLog_File);
+
   
   return 0;
 }
