@@ -49,6 +49,7 @@ win32_window_proc(::LRESULT &lresult,
           logf("win32_window_proc: RESTORED\n");
         } break;
       }
+      // @Note: we still need to handle the resizing somehow - use default proc.
       lresult = ::DefWindowProc(hwnd, message, wParam, lParam);
     } break;
 
