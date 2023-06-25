@@ -76,6 +76,8 @@ main(void) {
     win32_message_loop();
 
     gfx_im_rect({.x = 650, .y = 400}, {.width = 50, .height = 100}, COLOR_RED);
+    gfx_im_rect({.x = 600, .y = 300}, {.width = 50, .height = 100}, COLOR_GREEN);
+    gfx_im_rect({.x = 700, .y = 300}, {.width = 50, .height = 100},   COLOR_BLUE);
 
     gfx_render();
   }
