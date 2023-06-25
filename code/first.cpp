@@ -58,6 +58,7 @@ main(void) {
   os_init_filesystem();
   window_create_or_panic();
   gfx_init_or_panic();
+  gfx_im_init_or_panic();
 
   String_Builder sb;
 
@@ -74,6 +75,9 @@ main(void) {
 
   while(!window_is_closed()) {
     win32_message_loop();
+
+    gfx_im_rect({.x = 650, .y = 400}, {.width = 50, .height = 100}, COLOR_RED);
+
     gfx_render();
   }
   

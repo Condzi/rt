@@ -1,29 +1,11 @@
-#define d3d_safe_release_(x) \
-do {                         \
-  if (x) {                   \
-    x->Release();            \
-    x = NULL;                \
-  }                          \
-} while(false)
-
-#define d3d_check_hresult_(hr)                                      \
-do {                                                                \
-  if (FAILED(hr)) {                                                 \
-    String const error_str = os_error_to_string(hr);                \
-                                                                    \
-    logf("[D3D] !!! %s:%d -- ", __FILE__, (s32)__LINE__);           \
-    logf("%.*s\n", (s32)error_str.count, error_str.data);           \
-                                                                    \
-    errf("Failed to initialize DirectX 11.");                       \
-  }                                                                 \
-} while(false)
-
 namespace rt {
 struct D3d {
   ::ID3D11Device           *device             = NULL;
   ::ID3D11DeviceContext    *device_context     = NULL;
   ::IDXGISwapChain         *swap_chain         = NULL;
   ::ID3D11RenderTargetView *render_target_view = NULL; 
+
+  struct XXC_Pipeline *xxc_pipeline = NULL;
 } static gD3d;
 
 void
@@ -100,9 +82,11 @@ gfx_render() {
   // Tell the output merger to use our render target
   gD3d.device_context->OMSetRenderTargets(1, &gD3d.render_target_view, NULL);
 
-  // @Todo: flush vertives here
+  gfx_im_flush();
 
   // Present
   gD3d.swap_chain->Present( VSYNC?1:0, 0 );
 }
 } // namespace rt
+
+#include "im_pipeline.cxx"
