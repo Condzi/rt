@@ -34,26 +34,25 @@ gfx_init_or_panic() {
   ::UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
 
 #if HANDMADE_INTERNAL
-  // Causes crash (invalid parameter error) -- why? Wrong window creation params?
-  //flags |= D3D11_CREATE_DEVICE_DEBUG;
+  flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
   ::D3D_FEATURE_LEVEL feature_level;
   ::HRESULT hr;
   hr = ::D3D11CreateDeviceAndSwapChain(
-         NULL,
-         D3D_DRIVER_TYPE_HARDWARE,
-         NULL,
-         flags,
-         NULL,
-         0,
-         D3D11_SDK_VERSION,
-         &swap_chain_descr,
-         &gD3d.swap_chain,
-         &gD3d.device,
-         &feature_level,
-         &gD3d.device_context
-         );
+          NULL,
+          D3D_DRIVER_TYPE_HARDWARE,
+          NULL,
+          flags,
+          NULL,
+          0,
+          D3D11_SDK_VERSION,
+          &swap_chain_descr,
+          &gD3d.swap_chain,
+          &gD3d.device,
+          &feature_level,
+          &gD3d.device_context
+          );
 
   check_(gD3d.swap_chain);
   check_(gD3d.device);
@@ -69,7 +68,7 @@ gfx_init_or_panic() {
   
   d3d_safe_release_(framebuffer);
 
-  // @Todo: set up the pipelines here
+  gfx_im_init_or_panic();
 }
 
 void
