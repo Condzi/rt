@@ -11,11 +11,13 @@
 #include "math/math.hpp"
 #include "os/os.hpp"
 #include "window/window.hpp"
+#include "gfx/gfx.hpp"
 
 #include "base/base.cpp"
 #include "math/math.cpp"
 #include "os/os.cpp"
 #include "window/window.cpp"
+#include "gfx/gfx.cpp"
 
 
 using namespace rt;
@@ -55,6 +57,7 @@ main(void) {
   os_start_app_timer();
   os_init_filesystem();
   window_create_or_panic();
+  gfx_init_or_panic();
 
   String_Builder sb;
 
@@ -71,6 +74,12 @@ main(void) {
 
   while(!window_is_closed()) {
     win32_message_loop();
+
+    gfx_im_rect({.x = 650, .y = 400}, {.width = 50, .height = 100}, COLOR_RED);
+    gfx_im_rect({.x = 600, .y = 300}, {.width = 50, .height = 100}, COLOR_GREEN);
+    gfx_im_rect({.x = 700, .y = 300}, {.width = 50, .height = 100},   COLOR_BLUE);
+
+    gfx_render();
   }
   
   logf("Goodbye :)\n");
