@@ -40,14 +40,15 @@ gfx_init_or_panic() {
 #endif
 
   ::D3D_FEATURE_LEVEL feature_level;
+  ::D3D_FEATURE_LEVEL const feature_levels[] = {D3D_FEATURE_LEVEL_11_1};
   ::HRESULT hr;
   hr = ::D3D11CreateDeviceAndSwapChain(
           NULL,
           D3D_DRIVER_TYPE_HARDWARE,
           NULL,
           flags,
-          NULL,
-          0,
+          feature_levels,
+          ARRAYSIZE(feature_levels),
           D3D11_SDK_VERSION,
           &swap_chain_descr,
           &gD3d.swap_chain,

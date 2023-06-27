@@ -136,7 +136,7 @@ gfx_im_load_compile_create_shaders_or_panic() {
 
   hr = gD3d.device->CreateInputLayout(
                       input_layout, 
-                      sizeof(input_layout)/sizeof(*input_layout), 
+                      ARRAYSIZE(input_layout), 
                       vs_blob->GetBufferPointer(),
                       vs_blob->GetBufferSize(),
                       &gD3d.xxc_pipeline->layout
