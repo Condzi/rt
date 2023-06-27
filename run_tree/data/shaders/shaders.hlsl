@@ -26,7 +26,7 @@ float4 unpack_color(uint packedColor) {
 
 
 vs_out vs_main(vs_in input) {
-  vs_out output = (vs_out)0; // zero the memory first
+  vs_out output;
   
   output.position_clip = mul(float4(input.position_local, 0.0, 1.0), mul(transform, projection));
   output.color = unpack_color(input.packed_color);
