@@ -203,7 +203,12 @@ gfx_im_flush() {
     hr = device_ctx.Map(pipeline.consts, 0, D3D11_MAP_WRITE_DISCARD, 0, &consts_data);
     d3d_check_hresult_(hr);
 
-    mem_copy_(consts_data.pData, &pipeline.constants, sizeof(Constants));
+    Constants constants_transposed;
+    constants_transposed.camera     = transpose(pipeline.constants.camera);
+    constants_transposed.projection = transpose(pipeline.constants.projection);
+
+    mem_copy_(consts_data.pData, &constants_transposed, sizeof(constants_transposed));
+
     device_ctx.Unmap(pipeline.consts, 0);
   }
 

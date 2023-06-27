@@ -1,6 +1,6 @@
 cbuffer constants : register(b0) {
-  row_major float4x4 transform;
-  row_major float4x4 projection;
+  column_major float4x4 transform;
+  column_major float4x4 projection;
 }
 
 /* vertex attributes go here to input to the vertex shader */
