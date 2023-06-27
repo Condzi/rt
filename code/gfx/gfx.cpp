@@ -1,9 +1,11 @@
+#include "d3d_layer.hxx"
+
 namespace rt {
 struct D3d {
-  ::ID3D11Device           *device             = NULL;
-  ::ID3D11DeviceContext    *device_context     = NULL;
-  ::IDXGISwapChain         *swap_chain         = NULL;
-  ::ID3D11RenderTargetView *render_target_view = NULL; 
+  ::IDevice           *device             = NULL;
+  ::IDeviceContext    *device_context     = NULL;
+  ::ISwapChain        *swap_chain         = NULL;
+  ::IRenderTargetView *render_target_view = NULL; 
 
   struct XXC_Pipeline *xxc_pipeline = NULL;
 } static gD3d;
@@ -59,8 +61,8 @@ gfx_init_or_panic() {
   check_(gD3d.device_context);
   d3d_check_hresult_(hr);
 
-  ::ID3D11Texture2D *framebuffer;
-  hr = gD3d.swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&framebuffer);
+  ::ITexture2D *framebuffer;
+  hr = gD3d.swap_chain->GetBuffer(0, __uuidof(ITexture2D), (void**)&framebuffer);
   d3d_check_hresult_(hr);
 
   hr = gD3d.device->CreateRenderTargetView(framebuffer, 0, &gD3d.render_target_view);

@@ -1,12 +1,12 @@
 namespace rt {
 struct XXC_Pipeline {
-    D3D11_VIEWPORT         viewport;
-    ID3D11RasterizerState *rasterizer_state = NULL;
-    ID3D11VertexShader    *vs     = NULL;
-    ID3D11PixelShader     *ps     = NULL;
-    ID3D11InputLayout     *layout = NULL;
-    ID3D11Buffer          *vbo    = NULL;
-    ID3D11Buffer          *consts = NULL;
+    ::D3D11_VIEWPORT         viewport;
+    ::IRasterizerState *rasterizer_state = NULL;
+    ::IVertexShader    *vs     = NULL;
+    ::IPixelShader     *ps     = NULL;
+    ::IInputLayout     *layout = NULL;
+    ::IBuffer          *vbo    = NULL;
+    ::IBuffer          *consts = NULL;
     
     Constants  constants;
     
@@ -50,8 +50,8 @@ void
 gfx_im_load_compile_create_shaders_or_panic() {
   // Step 1. Load (and compile) shaders
 
-  ::ID3DBlob *vs_blob = NULL, *ps_blob = NULL;
-  ::ID3DBlob *err_blob = NULL;
+  ::IBlob *vs_blob = NULL, *ps_blob = NULL;
+  ::IBlob *err_blob = NULL;
   ::HRESULT hr;
   
   String shader_path = pathf("%S/shaders.hlsl");
@@ -179,11 +179,11 @@ gfx_im_rect(Vec2 position, Vec2 size, u32 color) {
 void
 gfx_im_flush() {
   ::HRESULT hr;
-  ::ID3D11DeviceContext &device_ctx = *gD3d.device_context;
-  XXC_Pipeline          &pipeline   = *gD3d.xxc_pipeline;
-  ::UINT const vertex_stride = sizeof(Vertex_XXC);
-  ::UINT const vertex_offset = 0;
-  ::UINT const vertex_count  = (::UINT)pipeline.v_mark;
+  ::IDeviceContext &device_ctx    = *gD3d.device_context;
+  XXC_Pipeline     &pipeline      = *gD3d.xxc_pipeline;
+  ::UINT const      vertex_stride = sizeof(Vertex_XXC);
+  ::UINT const      vertex_offset = 0;
+  ::UINT const      vertex_count  = (::UINT)pipeline.v_mark;
   
   pipeline.v_mark = 0;
 
