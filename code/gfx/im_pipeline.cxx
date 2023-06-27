@@ -222,7 +222,7 @@ gfx_im_flush() {
   device_ctx.VSSetShader(pipeline.vs, NULL, 0);
   device_ctx.VSSetConstantBuffers(0, 1, &pipeline.consts);
 
-  device_ctx.RSSetViewports( 1, &pipeline.viewport );
+  device_ctx.RSSetViewports(1, &pipeline.viewport);
   device_ctx.RSSetState(pipeline.rasterizer_state);
 
   device_ctx.PSSetShader(pipeline.ps, NULL, 0);
