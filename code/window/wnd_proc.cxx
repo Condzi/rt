@@ -8,12 +8,20 @@ win32_message_loop() {
   } 
 }
 
+// @Note: dear imgui window proc handler is defined in imgui.cpp, but forward 
+//        declared here in order to avoid Windows.h inclusion 
+[[nodiscard]] bool
+dear_imgui_window_proc(::LRESULT &lresult, 
+                       ::HWND hwnd, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
+
 ::LRESULT CALLBACK 
 win32_main_window_proc(::HWND hwnd, ::UINT message, ::WPARAM wParam, ::LPARAM lParam) {
   bool was_message_handled = false;
   ::LRESULT result;
 
   was_message_handled |= win32_window_proc(result, hwnd, message, wParam, lParam);
+  was_message_handled |= dear_imgui_window_proc(result, hwnd, message, wParam, lParam);
+  
   // ... more here ...
 
   if (!was_message_handled) {

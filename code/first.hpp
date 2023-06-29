@@ -35,14 +35,22 @@ struct String {
   s64 count;
   char *data;
 };
+
+void logf(const char *format, ...) {
+  va_list args1;
+  va_list args2;
+
+  va_start(args1, format);
+  va_copy(args2, args1);
+
+  vfprintf(gLog_File, format, args1);
+  vprintf(format, args2);
+
+  va_end(args1);
+  va_end(args2);
+}
 } // namespace rt
 
-#define logf(...)                      \
-  do {                                 \
-    fprintf(gLog_File, __VA_ARGS__);   \
-    printf(__VA_ARGS__);               \
-  } while (false)
-  
 
 #define check_(x)                                     \
   do {                                                \

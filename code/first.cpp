@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cfloat>
 #include <cmath>
+#include <stdarg.h> // logf
 
 #include "first.hpp"
 
@@ -59,6 +60,7 @@ main(void) {
   os_init_filesystem();
   window_create_or_panic();
   gfx_init_or_panic();
+  dear_imgui_init();
 
   String_Builder sb;
 
@@ -79,6 +81,8 @@ main(void) {
     gfx_im_rect({.x = 650, .y = 400}, {.width = 50, .height = 100}, COLOR_RED);
     gfx_im_rect({.x = 600, .y = 300}, {.width = 50, .height = 100}, COLOR_GREEN);
     gfx_im_rect({.x = 700, .y = 300}, {.width = 50, .height = 100},   COLOR_BLUE);
+
+    dear_imgui_update();
 
     gfx_render();
   }
