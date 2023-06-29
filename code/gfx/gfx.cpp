@@ -80,11 +80,11 @@ gfx_render() {
   float background_colour[4] = { 0x64 / 255.0f, 0x95 / 255.0f, 0xED / 255.0f, 1.0f };
   gD3d.device_context->ClearRenderTargetView(gD3d.render_target_view, background_colour);
 
-
   // Tell the output merger to use our render target
   gD3d.device_context->OMSetRenderTargets(1, &gD3d.render_target_view, NULL);
 
   gfx_im_flush();
+  dear_imgui_draw();
 
   // Present
   gD3d.swap_chain->Present( VSYNC?1:0, 0 );

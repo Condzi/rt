@@ -29,14 +29,10 @@ don't handle the message, we fallback to the default window handler and that's i
 This will prevent the window module from being too specific / tied to other modules.
 
 # To do / priority
-- window creation
-- DirectX 11 immediate pipeline
-  - simple texture rendering (for CPU raytraycer)
-  - 2D debug shapes
-  - 3D debug shapes?! -- need 3D math
 - UTF-8, use String everywhere & rewrite the tprint to accept it.
 
 - hw info (simd availability, threads) from Agner Fog
 
 - unit test for math module
 - translate build scripts to shell?
+- 3D debug shapes?! -- need 3D math

@@ -62,6 +62,14 @@
   #pragma comment( lib, "d3dcompiler.lib" ) // shader compiler
 // DirectX 11}
 
+// ImGui Backend dependencies {
+  #include <windowsx.h> // GET_X_LPARAM(), GET_Y_LPARAM()
+  #include <tchar.h>
+  #include <dwmapi.h>
+  #include <xinput.h>
+// } ImGui Backend dependencies
+
+
 // near/far pointers O.O!
 #undef near
 #undef far
