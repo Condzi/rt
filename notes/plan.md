@@ -2,9 +2,13 @@ Estimated time: ~4 Months: June - October.
 
 
 # June - Preparation phase
+- [ ] Project utilities (logger, file management, error management)
 - [ ] DirectX 11 renderer pipeline for immediate, debug shapes (2D and 3D?)
 - [ ] ImGui
-- [ ] Project utilities (logger, file management, error management)
+
+Revise the plan because the collision aspect is a bit of an umbrealla term. Are we
+gonna implement some simple AABB collisions, or some actual physics? Maybe 
+RT + collision detection can yield some cool effects...?
 
 # July - Prototyping
 - [ ] Balls rendering
@@ -21,6 +25,7 @@ Estimated time: ~4 Months: June - October.
 - [ ] Editor
 - [ ] Profiling 
 - [ ] Optimizing
+- [ ] Collision detection
 
 # October
 Writing the thesis document.
