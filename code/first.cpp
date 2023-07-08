@@ -14,6 +14,7 @@
 #include "window/window.hpp"
 #include "gfx/gfx.hpp"
 #include "imgui/imgui.hpp"
+#include "parsers/parsers.hpp"
 
 #include "base/base.cpp"
 #include "math/math.cpp"
@@ -21,6 +22,7 @@
 #include "window/window.cpp"
 #include "gfx/gfx.cpp"
 #include "imgui/imgui.cpp"
+#include "parsers/parsers.cpp"
 
 using namespace rt;
 
