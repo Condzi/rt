@@ -1,6 +1,6 @@
 /**
  * The math module is, at the moment, 99% copy-paste from previous projects.
-*/
+ */
 
 #include "vec.hxx"
 #include "mat.hxx"

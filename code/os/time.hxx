@@ -1,6 +1,6 @@
 /**
  * Tracking time & retrieving info about current date
-*/
+ */
 namespace rt {
 struct Time_of_Day {
   s32 day, month, year;

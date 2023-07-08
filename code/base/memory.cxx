@@ -1,7 +1,7 @@
 namespace rt {
 struct Memory_State {
   Buffer temp_memory;
-  s64 temp_mark;
+  s64    temp_mark;
 } static gMemory_State;
 
 [[nodiscard]] bool
@@ -15,12 +15,12 @@ init_memory() {
   ::memset(temp_memory_from_system, 0, TEMP_MEM_SIZE);
 
   gMemory_State.temp_memory.count = TEMP_MEM_SIZE;
-  gMemory_State.temp_memory.bytes = (u8*)temp_memory_from_system;
+  gMemory_State.temp_memory.bytes = (u8 *)temp_memory_from_system;
 
   return true;
 }
 
-[[nodiscard]] void* 
+[[nodiscard]] void *
 alloc_perm(s64 size) {
   dbg_check_(size > 0);
 
@@ -33,7 +33,7 @@ alloc_perm(s64 size) {
   return mem;
 }
 
-[[nodiscard]] void* 
+[[nodiscard]] void *
 alloc_temp(s64 size) {
   dbg_check_(size > 0);
   dbg_check_(gMemory_State.temp_mark + size < TEMP_MEM_SIZE);
@@ -62,7 +62,7 @@ pop_temp_mem_mark(s64 size) {
   ::memset(gMemory_State.temp_memory.bytes + gMemory_State.temp_mark, 0, size);
 }
 
-void 
+void
 clear_temp_mem() {
   ::memset(gMemory_State.temp_memory.bytes, 0, gMemory_State.temp_mark);
 }

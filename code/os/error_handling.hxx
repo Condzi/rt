@@ -1,6 +1,6 @@
 /**
  * Functions related to retrieving information about errors and handling crashes.
-*/
+ */
 
 namespace rt {
 [[nodiscard]] String
@@ -11,6 +11,6 @@ os_get_last_error();
 
 // @Note: VEH is added only when debugger is not present because otherwise we trap
 //        debugger related exceptions.
-void 
+void
 os_register_vectored_exception_handler();
 } // namespace rt

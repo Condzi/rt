@@ -1,35 +1,34 @@
 namespace rt {
 struct XXC_Pipeline {
-    ::D3D11_VIEWPORT         viewport;
-    ::IRasterizerState *rasterizer_state = NULL;
-    ::IVertexShader    *vs     = NULL;
-    ::IPixelShader     *ps     = NULL;
-    ::IInputLayout     *layout = NULL;
-    ::IBuffer          *vbo    = NULL;
-    ::IBuffer          *consts = NULL;
-    
-    Constants  constants;
-    
-    Vertex_XXC v[IM_TRIS_COUNT*3];
-    s64        v_mark;
+  ::D3D11_VIEWPORT    viewport;
+  ::IRasterizerState *rasterizer_state = NULL;
+  ::IVertexShader    *vs               = NULL;
+  ::IPixelShader     *ps               = NULL;
+  ::IInputLayout     *layout           = NULL;
+  ::IBuffer          *vbo              = NULL;
+  ::IBuffer          *consts           = NULL;
+
+  Constants constants;
+
+  Vertex_XXC v[IM_TRIS_COUNT * 3];
+  s64        v_mark;
 };
 
-void 
+void
 gfx_im_load_compile_create_shaders_or_panic();
 
 void
 gfx_im_create_vbo_or_panic();
 
-void 
+void
 gfx_im_create_constants_buffer_or_panic();
 
 void
 gfx_im_create_rasterizer_or_panic();
 
-
 void
 gfx_im_init_or_panic() {
-  gD3d.xxc_pipeline = (XXC_Pipeline*)alloc_perm(sizeof(XXC_Pipeline));
+  gD3d.xxc_pipeline = (XXC_Pipeline *)alloc_perm(sizeof(XXC_Pipeline));
 
   gfx_im_load_compile_create_shaders_or_panic();
   gfx_im_create_vbo_or_panic();
@@ -37,110 +36,89 @@ gfx_im_init_or_panic() {
   gfx_im_create_rasterizer_or_panic();
 
   gD3d.xxc_pipeline->viewport = {
-    0.0f,
-    0.0f,
-    window_get_size().width,
-    window_get_size().height,
-    0.0f,
-    1.0f 
-  };
+      0.0f, 0.0f, window_get_size().width, window_get_size().height, 0.0f, 1.0f};
 }
 
-void 
+void
 gfx_im_load_compile_create_shaders_or_panic() {
   // Step 1. Load (and compile) shaders
 
-  ::IBlob *vs_blob = NULL, *ps_blob = NULL;
-  ::IBlob *err_blob = NULL;
+  ::IBlob  *vs_blob = NULL, *ps_blob = NULL;
+  ::IBlob  *err_blob = NULL;
   ::HRESULT hr;
-  
+
   String shader_path = pathf("%S/shaders.hlsl");
-  Buffer raw_shader = os_read_entire_file_or_panic(as_cstr(shader_path));
+  Buffer raw_shader  = os_read_entire_file_or_panic(as_cstr(shader_path));
 
-  ::UINT constexpr static SHADER_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG;
+  ::UINT constexpr static SHADER_FLAGS =
+      D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG;
 
-  hr = ::D3DCompile(
-          raw_shader.bytes, 
-          raw_shader.count,
-          NULL,
-          NULL,
-          D3D_COMPILE_STANDARD_FILE_INCLUDE,
-          "vs_main", 
-          "vs_5_0", 
-          SHADER_FLAGS, 
-          0,
-          &vs_blob, 
-          &err_blob
-          );
+  hr = ::D3DCompile(raw_shader.bytes,
+                    raw_shader.count,
+                    NULL,
+                    NULL,
+                    D3D_COMPILE_STANDARD_FILE_INCLUDE,
+                    "vs_main",
+                    "vs_5_0",
+                    SHADER_FLAGS,
+                    0,
+                    &vs_blob,
+                    &err_blob);
 
   if (FAILED(hr) && err_blob) {
-    errf("Failed to compile the vertex shader: %s", 
-          (char const*)err_blob->GetBufferPointer());
+    errf("Failed to compile the vertex shader: %s",
+         (char const *)err_blob->GetBufferPointer());
   }
   d3d_check_hresult_(hr);
 
-  hr = ::D3DCompile(
-          raw_shader.bytes, 
-          raw_shader.count,
-          NULL,
-          NULL,
-          D3D_COMPILE_STANDARD_FILE_INCLUDE,
-          "ps_main", 
-          "ps_5_0", 
-          SHADER_FLAGS, 
-          0,
-          &ps_blob, 
-          &err_blob
-          );
+  hr = ::D3DCompile(raw_shader.bytes,
+                    raw_shader.count,
+                    NULL,
+                    NULL,
+                    D3D_COMPILE_STANDARD_FILE_INCLUDE,
+                    "ps_main",
+                    "ps_5_0",
+                    SHADER_FLAGS,
+                    0,
+                    &ps_blob,
+                    &err_blob);
 
   if (FAILED(hr) && err_blob) {
-    errf("Failed to compile the pixel shader: %s", 
-          (char const*)err_blob->GetBufferPointer());
+    errf("Failed to compile the pixel shader: %s",
+         (char const *)err_blob->GetBufferPointer());
   }
   d3d_check_hresult_(hr);
-
 
   // Step 2. Create shader objects
-  hr = gD3d.device->CreateVertexShader(
-                      vs_blob->GetBufferPointer(),
-                      vs_blob->GetBufferSize(), 
-                      NULL,
-                      &gD3d.xxc_pipeline->vs
-                      );
+  hr = gD3d.device->CreateVertexShader(vs_blob->GetBufferPointer(),
+                                       vs_blob->GetBufferSize(),
+                                       NULL,
+                                       &gD3d.xxc_pipeline->vs);
   d3d_check_hresult_(hr);
 
-  hr = gD3d.device->CreatePixelShader(
-                      ps_blob->GetBufferPointer(),
-                      ps_blob->GetBufferSize(), 
-                      NULL,
-                      &gD3d.xxc_pipeline->ps
-                      );
+  hr = gD3d.device->CreatePixelShader(ps_blob->GetBufferPointer(),
+                                      ps_blob->GetBufferSize(),
+                                      NULL,
+                                      &gD3d.xxc_pipeline->ps);
   d3d_check_hresult_(hr);
 
-  // Step 3. Describe the input of the Vertex Shader 
+  // Step 3. Describe the input of the Vertex Shader
 
   ::D3D11_INPUT_ELEMENT_DESC input_layout[] = {
-    {
-      .SemanticName = "POS",
-      .Format       = DXGI_FORMAT_R32G32_FLOAT,
-      .InputSlot    = D3D11_INPUT_PER_VERTEX_DATA
-    },
+      {.SemanticName = "POS",
+       .Format       = DXGI_FORMAT_R32G32_FLOAT,
+       .InputSlot    = D3D11_INPUT_PER_VERTEX_DATA},
 
-    {
-      .SemanticName      = "COL",
-      .Format            = DXGI_FORMAT_R32_UINT,
-      .AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT,
-      .InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA
-    }
-  };
+      {.SemanticName      = "COL",
+       .Format            = DXGI_FORMAT_R32_UINT,
+       .AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT,
+       .InputSlotClass    = D3D11_INPUT_PER_VERTEX_DATA}};
 
-  hr = gD3d.device->CreateInputLayout(
-                      input_layout, 
-                      ARRAYSIZE(input_layout), 
-                      vs_blob->GetBufferPointer(),
-                      vs_blob->GetBufferSize(),
-                      &gD3d.xxc_pipeline->layout
-                      );
+  hr = gD3d.device->CreateInputLayout(input_layout,
+                                      ARRAYSIZE(input_layout),
+                                      vs_blob->GetBufferPointer(),
+                                      vs_blob->GetBufferSize(),
+                                      &gD3d.xxc_pipeline->layout);
   d3d_check_hresult_(hr);
 
   d3d_safe_release_(err_blob);
@@ -152,10 +130,10 @@ void
 gfx_im_vertex(Vec2 position, u32 color) {
   XXC_Pipeline &p = *gD3d.xxc_pipeline;
 
-  p.v[p.v_mark] = Vertex_XXC{position, color};
+  p.v[p.v_mark] = Vertex_XXC {position, color};
   p.v_mark++;
 
-  if (p.v_mark == sizeof(p.v)/sizeof(*p.v)) {
+  if (p.v_mark == sizeof(p.v) / sizeof(*p.v)) {
     gfx_im_flush();
   }
 }
@@ -163,12 +141,12 @@ gfx_im_vertex(Vec2 position, u32 color) {
 void
 gfx_im_rect(Vec2 position, Vec2 size, u32 color) {
   Vec2 const p[6] = {
-    {position.x         , position.y},         /* top-left */
-    {position.x + size.x, position.y},         /* top-right */
-    {position.x + size.x, position.y - size.y},/* btm-right */
-    {position.x + size.x, position.y - size.y},/* btm-right */
-    {position.x         , position.y - size.y},/* btm-left */
-    {position.x         , position.y}          /* top-left */
+      {position.x, position.y},                   /* top-left */
+      {position.x + size.x, position.y},          /* top-right */
+      {position.x + size.x, position.y - size.y}, /* btm-right */
+      {position.x + size.x, position.y - size.y}, /* btm-right */
+      {position.x, position.y - size.y},          /* btm-left */
+      {position.x, position.y}                    /* top-left */
   };
 
   for (int i = 0; i < 6; i++) {
@@ -178,13 +156,13 @@ gfx_im_rect(Vec2 position, Vec2 size, u32 color) {
 
 void
 gfx_im_flush() {
-  ::HRESULT hr;
+  ::HRESULT         hr;
   ::IDeviceContext &device_ctx    = *gD3d.device_context;
   XXC_Pipeline     &pipeline      = *gD3d.xxc_pipeline;
   ::UINT const      vertex_stride = sizeof(Vertex_XXC);
   ::UINT const      vertex_offset = 0;
   ::UINT const      vertex_count  = (::UINT)pipeline.v_mark;
-  
+
   pipeline.v_mark = 0;
 
   // Copy new vertices to VRAM
@@ -193,7 +171,7 @@ gfx_im_flush() {
     hr = device_ctx.Map(pipeline.vbo, 0, D3D11_MAP_WRITE_DISCARD, 0, &vbo_data);
     d3d_check_hresult_(hr);
 
-    mem_copy_(vbo_data.pData, pipeline.v, sizeof(Vertex_XXC)*vertex_count);
+    mem_copy_(vbo_data.pData, pipeline.v, sizeof(Vertex_XXC) * vertex_count);
     device_ctx.Unmap(pipeline.vbo, 0);
   }
 
@@ -212,7 +190,7 @@ gfx_im_flush() {
     device_ctx.Unmap(pipeline.consts, 0);
   }
 
-  // Set the input assembler - what vertex buffer to draw, its layout, topology 
+  // Set the input assembler - what vertex buffer to draw, its layout, topology
 
   device_ctx.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   device_ctx.IASetInputLayout(pipeline.layout);
@@ -233,54 +211,40 @@ gfx_im_flush() {
 
 void
 gfx_im_create_vbo_or_panic() {
-  ::D3D11_BUFFER_DESC const vbo_desc = {
-    .ByteWidth      = sizeof(XXC_Pipeline::v),
-    .Usage          = D3D11_USAGE_DYNAMIC,
-    .BindFlags      = D3D11_BIND_VERTEX_BUFFER,
-    .CPUAccessFlags = D3D11_CPU_ACCESS_WRITE
-  };
+  ::D3D11_BUFFER_DESC const vbo_desc = {.ByteWidth      = sizeof(XXC_Pipeline::v),
+                                        .Usage          = D3D11_USAGE_DYNAMIC,
+                                        .BindFlags      = D3D11_BIND_VERTEX_BUFFER,
+                                        .CPUAccessFlags = D3D11_CPU_ACCESS_WRITE};
 
-  ::HRESULT hr = gD3d.device->CreateBuffer(
-                                &vbo_desc, 
-                                NULL, 
-                                &gD3d.xxc_pipeline->vbo
-                                );
+  ::HRESULT hr = gD3d.device->CreateBuffer(&vbo_desc, NULL, &gD3d.xxc_pipeline->vbo);
   d3d_check_hresult_(hr);
 }
 
-void 
+void
 gfx_im_create_constants_buffer_or_panic() {
-  ::D3D11_BUFFER_DESC const consts_desc = {
-    .ByteWidth      = sizeof(Constants),
-    .Usage          = D3D11_USAGE_DYNAMIC,
-    .BindFlags      = D3D11_BIND_CONSTANT_BUFFER,
-    .CPUAccessFlags = D3D11_CPU_ACCESS_WRITE
-  };
+  ::D3D11_BUFFER_DESC const consts_desc = {.ByteWidth = sizeof(Constants),
+                                           .Usage     = D3D11_USAGE_DYNAMIC,
+                                           .BindFlags = D3D11_BIND_CONSTANT_BUFFER,
+                                           .CPUAccessFlags = D3D11_CPU_ACCESS_WRITE};
 
-  ::HRESULT hr = gD3d.device->CreateBuffer(
-                                &consts_desc, 
-                                NULL, 
-                                &gD3d.xxc_pipeline->consts
-                                );
-  d3d_check_hresult_(hr);  
+  ::HRESULT hr =
+      gD3d.device->CreateBuffer(&consts_desc, NULL, &gD3d.xxc_pipeline->consts);
+  d3d_check_hresult_(hr);
 
-  // Set constants to a valid, known state 
+  // Set constants to a valid, known state
   Vec2 const win_size = window_get_size();
-  gD3d.xxc_pipeline->constants.projection = ortho_proj(win_size.width, win_size.height);
-  gD3d.xxc_pipeline->constants.camera     = identity();
+  gD3d.xxc_pipeline->constants.projection =
+      ortho_proj(win_size.width, win_size.height);
+  gD3d.xxc_pipeline->constants.camera = identity();
 }
 
 void
 gfx_im_create_rasterizer_or_panic() {
-  ::D3D11_RASTERIZER_DESC rasterizer_desc = {
-    .FillMode = D3D11_FILL_SOLID,
-    .CullMode = D3D11_CULL_BACK
-  };
-  
+  ::D3D11_RASTERIZER_DESC rasterizer_desc = {.FillMode = D3D11_FILL_SOLID,
+                                             .CullMode = D3D11_CULL_BACK};
+
   ::HRESULT hr = gD3d.device->CreateRasterizerState(
-                                &rasterizer_desc, 
-                                &gD3d.xxc_pipeline->rasterizer_state
-                                );
+      &rasterizer_desc, &gD3d.xxc_pipeline->rasterizer_state);
   d3d_check_hresult_(hr);
 }
 } // namespace rt

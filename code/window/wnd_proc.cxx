@@ -1,27 +1,34 @@
 namespace rt {
-void 
+void
 win32_message_loop() {
   MSG msg = {0};
   if (::PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
     ::TranslateMessage(&msg);
     ::DispatchMessage(&msg);
-  } 
+  }
 }
 
-// @Note: dear imgui window proc handler is defined in imgui.cpp, but forward 
-//        declared here in order to avoid Windows.h inclusion 
+// @Note: dear imgui window proc handler is defined in imgui.cpp, but forward
+//        declared here in order to avoid Windows.h inclusion
 [[nodiscard]] bool
-dear_imgui_window_proc(::LRESULT &lresult, 
-                       ::HWND hwnd, ::UINT message, ::WPARAM wParam, ::LPARAM lParam);
+dear_imgui_window_proc(::LRESULT &lresult,
+                       ::HWND     hwnd,
+                       ::UINT     message,
+                       ::WPARAM   wParam,
+                       ::LPARAM   lParam);
 
-::LRESULT CALLBACK 
-win32_main_window_proc(::HWND hwnd, ::UINT message, ::WPARAM wParam, ::LPARAM lParam) {
-  bool was_message_handled = false;
+::LRESULT CALLBACK
+win32_main_window_proc(::HWND   hwnd,
+                       ::UINT   message,
+                       ::WPARAM wParam,
+                       ::LPARAM lParam) {
+  bool      was_message_handled = false;
   ::LRESULT result;
 
   was_message_handled |= win32_window_proc(result, hwnd, message, wParam, lParam);
-  was_message_handled |= dear_imgui_window_proc(result, hwnd, message, wParam, lParam);
-  
+  was_message_handled |=
+      dear_imgui_window_proc(result, hwnd, message, wParam, lParam);
+
   // ... more here ...
 
   if (!was_message_handled) {
@@ -32,14 +39,17 @@ win32_main_window_proc(::HWND hwnd, ::UINT message, ::WPARAM wParam, ::LPARAM lP
 }
 
 [[nodiscard]] bool
-win32_window_proc(::LRESULT &lresult, 
-                  ::HWND hwnd, ::UINT message, ::WPARAM wParam, ::LPARAM lParam) {
+win32_window_proc(::LRESULT &lresult,
+                  ::HWND     hwnd,
+                  ::UINT     message,
+                  ::WPARAM   wParam,
+                  ::LPARAM   lParam) {
   bool handled = true;
 
   switch (message) {
     case WM_SYSCOMMAND: {
       switch (wParam) {
-        // @Note: this should be handled by the debug renderer too - 
+        // @Note: this should be handled by the debug renderer too -
         //        don't render if we're not visible. However, the RT
         //        should still take place, since it's taking a bit...
         case SC_MINIMIZE: {

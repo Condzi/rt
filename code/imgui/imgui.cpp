@@ -1,11 +1,11 @@
 #include "imgui_dx11.hxx"
 #include "imgui_win32.hxx"
 
-extern IMGUI_IMPL_API LRESULT 
+extern IMGUI_IMPL_API LRESULT
 ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace rt {
-void 
+void
 dear_imgui_init() {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -33,8 +33,11 @@ dear_imgui_draw() {
 }
 
 [[nodiscard]] bool
-dear_imgui_window_proc(::LRESULT &lresult, 
-                       ::HWND hwnd, ::UINT message, ::WPARAM wParam, ::LPARAM lParam) {
+dear_imgui_window_proc(::LRESULT &lresult,
+                       ::HWND     hwnd,
+                       ::UINT     message,
+                       ::WPARAM   wParam,
+                       ::LPARAM   lParam) {
 
   lresult = ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam);
   return lresult != 0;
@@ -49,5 +52,3 @@ dear_imgui_window_proc(::LRESULT &lresult,
 
 #include "imgui_win32.cxx"
 #include "imgui_dx11.cxx"
-
-

@@ -1,13 +1,13 @@
 #ifdef _WIN32
-  #ifndef _WIN64
-    #error 32-bit Windows is not supported.
-  #endif // _WIN64
+#  ifndef _WIN64
+#    error 32-bit Windows is not supported.
+#  endif // _WIN64
 #else
-  #error Platform not supported.
+#  error Platform not supported.
 #endif // _WIN32
 
 #ifndef _MSC_VER
-  #error The only supported compiler is MSVC. 
+#  error The only supported compiler is MSVC.
 #endif // _MSVC
 
 namespace rt {
@@ -32,11 +32,12 @@ struct Buffer {
 };
 
 struct String {
-  s64 count;
+  s64   count;
   char *data;
 };
 
-void logf(const char *format, ...) {
+void
+logf(const char *format, ...) {
   va_list args1;
   va_list args2;
 
@@ -51,47 +52,47 @@ void logf(const char *format, ...) {
 }
 } // namespace rt
 
-
-#define check_(x)                                     \
-  do {                                                \
-    if (!(x)) {                                       \
-      logf("!!! Check failed!\n");                    \
-      logf("!!! \t" #x "\n");                         \
-      logf("!!! %s:%d\n", __FILE__, (int)__LINE__);   \
-    }                                                 \
+#define check_(x)                                                                    \
+  do {                                                                               \
+    if (!(x)) {                                                                      \
+      logf("!!! Check failed!\n");                                                   \
+      logf("!!! \t" #x "\n");                                                        \
+      logf("!!! %s:%d\n", __FILE__, (int)__LINE__);                                  \
+    }                                                                                \
   } while (false)
 
 #ifdef NDEBUG
-  #define dbg_check_(x) __noop
+#  define dbg_check_(x) __noop
 #else
-  #define dbg_check_(x) \
-    do {                                                \
-      if (!(x)) {                                       \
-        logf("!!! Debug check failed!\n");              \
-        logf("!!! \t" #x "\n");                         \
-        logf("!!! %s:%d\n", __FILE__, (int)__LINE__);   \
-      }                                                 \
+#  define dbg_check_(x)                                                              \
+    do {                                                                             \
+      if (!(x)) {                                                                    \
+        logf("!!! Debug check failed!\n");                                           \
+        logf("!!! \t" #x "\n");                                                      \
+        logf("!!! %s:%d\n", __FILE__, (int)__LINE__);                                \
+      }                                                                              \
     } while (false)
 #endif
 
-#define RT_KILOBYTES(x) (x*1024)
-#define RT_MEGABYTES(x) (RT_KILOBYTES(x)*1024)
+#define RT_KILOBYTES(x) (x * 1024)
+#define RT_MEGABYTES(x) (RT_KILOBYTES(x) * 1024)
 
 #define mem_comp_ ::memcmp
 #define mem_copy_ ::memcpy
 
 namespace rt {
 template <typename T>
-void rt_swap(T &a, T &b) {
-	size_t constexpr static size = sizeof(T);
-	u8 buf[size];
-  
-	mem_copy_(buf, &a,  size);
-	mem_copy_(&a,  &b,  size);
-	mem_copy_(&b,  buf, size);
-}
-}
+void
+rt_swap(T &a, T &b) {
+  size_t constexpr static size = sizeof(T);
+  u8 buf[size];
 
-template <typename ...TArgs> 
+  mem_copy_(buf, &a, size);
+  mem_copy_(&a, &b, size);
+  mem_copy_(&b, buf, size);
+}
+} // namespace rt
+
+template <typename... TArgs>
 [[noreturn]] void
-errf(char const *fmt, TArgs ...args);
+errf(char const *fmt, TArgs... args);

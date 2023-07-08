@@ -24,17 +24,18 @@
 
 using namespace rt;
 
-template <typename ...TArgs> 
+template <typename... TArgs>
 [[noreturn]] void
-errf(char const *fmt, TArgs ...args) {
-  u32    const last_error     = os_get_last_error();
+errf(char const *fmt, TArgs... args) {
+  u32 const    last_error     = os_get_last_error();
   String const last_error_str = os_error_to_string(last_error);
 
   logf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
   logf("        Fatal error!\n    ");
   logf(fmt, args...);
   logf("\n\nLast OS error:\n        %.*s\n",
-       (s32)last_error_str.count, last_error_str.data);
+       (s32)last_error_str.count,
+       last_error_str.data);
   logf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
   ::fflush(stdout);
@@ -42,13 +43,13 @@ errf(char const *fmt, TArgs ...args) {
   ::exit(1);
 }
 
-int 
+int
 main(void) {
   gLog_File = fopen(RT_LOG_FILE, "w");
 
-  Vec2 vec2{1,1};
-  vec2 = Vec2{2,2};
-  Vec4 vec{.xy = vec2};
+  Vec2 vec2 {1, 1};
+  vec2 = Vec2 {2, 2};
+  Vec4 vec {.xy = vec2};
 
   logf("Logger initialized!\n");
 
@@ -75,21 +76,20 @@ main(void) {
 
   dbg_check_(false);
 
-  while(!window_is_closed()) {
+  while (!window_is_closed()) {
     win32_message_loop();
 
     gfx_im_rect({.x = 650, .y = 400}, {.width = 50, .height = 100}, COLOR_RED);
     gfx_im_rect({.x = 600, .y = 300}, {.width = 50, .height = 100}, COLOR_GREEN);
-    gfx_im_rect({.x = 700, .y = 300}, {.width = 50, .height = 100},   COLOR_BLUE);
+    gfx_im_rect({.x = 700, .y = 300}, {.width = 50, .height = 100}, COLOR_BLUE);
 
     dear_imgui_update();
 
     gfx_render();
   }
-  
+
   logf("Goodbye :)\n");
   fflush(gLog_File);
 
-  
   return 0;
 }
