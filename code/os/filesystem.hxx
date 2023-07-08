@@ -1,6 +1,6 @@
 /**
  * File I/O
-*/
+ */
 namespace rt {
 [[nodiscard]] Buffer
 os_read_entire_file_or_panic(char const *path);
@@ -20,7 +20,7 @@ os_init_filesystem();
 
 /**
  * Creates a normalized path from a format string. Available modifiers:
- * 
+ *
  *  %c -- current working directory (W:\pwr/engineering-thesis/rt/run_tree)
  *  %l -- %c/logs
  *  %d -- %c/data
@@ -28,7 +28,7 @@ os_init_filesystem();
  *  %a -- %c/assets
  *  %t -- %a/textures
  *  %m -- %a/models
-*/
+ */
 [[nodiscard]] String
 pathf(char const *fmt);
 } // namespace rt

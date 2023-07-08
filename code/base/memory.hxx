@@ -3,17 +3,17 @@
  * we just crash (with some good error message). In case of temp memory, we fallback
  * (and leak) the permanent memory.
  *                                                        - kkubacki, 30th May 2023
-*/
+ */
 
 namespace rt {
 
 [[nodiscard]] bool
 init_memory();
 
-[[nodiscard]] void* 
+[[nodiscard]] void *
 alloc_perm(s64 size);
 
-[[nodiscard]] void* 
+[[nodiscard]] void *
 alloc_temp(s64 size);
 
 [[nodiscard]] s64
@@ -23,6 +23,6 @@ get_temp_mem_mark();
 void
 pop_temp_mem_mark(s64 size);
 
-void 
+void
 clear_temp_mem();
 } // namespace rt

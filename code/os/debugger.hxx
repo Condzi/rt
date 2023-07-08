@@ -1,6 +1,6 @@
 /**
  * Functions used for interfacing with debugger (if attached)
-*/
+ */
 
 namespace rt {
 [[nodiscard]] bool

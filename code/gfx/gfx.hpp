@@ -22,4 +22,4 @@ gfx_init_or_panic();
 
 void
 gfx_render();
-} // namespace rt;
+} // namespace rt
