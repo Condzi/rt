@@ -1,2 +1,4 @@
 build/
 .vscode
+run_tree/log.txt
+run_tree/imgui.ini
