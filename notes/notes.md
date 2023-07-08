@@ -28,7 +28,23 @@ different modules (window module, input module and rendering module). If the sub
 don't handle the message, we fallback to the default window handler and that's it.
 This will prevent the window module from being too specific / tied to other modules.
 
+
+potential problems:
+- camera
+- editor
+
 # To do / priority
+
+- CPU Raytraycer (based on "rt in one weekend")
+  - output to a D3D texture
+  - ray-ball
+  - antialiasing
+  - rng
+  - camera
+  - diffuse material \w true lambertian
+  - metal metarial
+  - dielectric material (glass)
+
 - UTF-8, use String everywhere & rewrite the tprint to accept it.
 
 - hw info (simd availability, threads) from Agner Fog

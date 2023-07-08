@@ -2,13 +2,12 @@ Estimated time: ~4 Months: June - October.
 
 
 # June - Preparation phase
-- [ ] Project utilities (logger, file management, error management)
-- [ ] DirectX 11 renderer pipeline for immediate, debug shapes (2D and 3D?)
-- [ ] ImGui
+- [X] Project utilities (logger, file management, error management)
+- [X] DirectX 11 renderer pipeline for immediate, debug 2D shapes
+- [X] ImGui
 
-Revise the plan because the collision aspect is a bit of an umbrealla term. Are we
-gonna implement some simple AABB collisions, or some actual physics? Maybe 
-RT + collision detection can yield some cool effects...?
+Start with the Compute Shaders? What are the downsides of Coding Adventure & 
+Raytraycing in One Weekeend? Can I combine them somehow to get something better?
 
 # July - Prototyping
 - [ ] Balls rendering
@@ -18,14 +17,23 @@ RT + collision detection can yield some cool effects...?
 
 # August - Prototyping, porting to compute shaders?
 @todo: be more specific
+- [ ] Compute shader pipeline setup
 - [ ] 3D models
 
 # September 
-@todo: be more specific
-- [ ] Editor
-- [ ] Profiling 
-- [ ] Optimizing
-- [ ] Collision detection
 
 # October
 Writing the thesis document.
+
+
+Miscealenous 
+- [ ] Editor
+- [ ] 3D immediate pipeline (to preview objects/scene in editor)
+- [ ] Profiling 
+- [ ] Optimizing
+
+Simulation aspect:
+- flag simulation
+- water simulation
+- smoke simulation
+- some deformation? how about car physics stuff from Kamil?
