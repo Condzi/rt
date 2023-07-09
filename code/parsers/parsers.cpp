@@ -13,6 +13,8 @@ write_png_or_panic(char const *path, Buffer data, Vec2 size) {
   check_(data.count == width * height * NUM_OF_CHANNELS);
   check_(data.bytes);
 
+  stbi_flip_vertically_on_write(1);
+
   int status =
       stbi_write_png(path, width, height, NUM_OF_CHANNELS, data.bytes, stride);
 
