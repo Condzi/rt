@@ -15,6 +15,7 @@
 #include "gfx/gfx.hpp"
 #include "imgui/imgui.hpp"
 #include "parsers/parsers.hpp"
+#include "cpu_rt/cpu_rt.hpp"
 
 #include "base/base.cpp"
 #include "math/math.cpp"
@@ -23,6 +24,7 @@
 #include "gfx/gfx.cpp"
 #include "imgui/imgui.cpp"
 #include "parsers/parsers.cpp"
+#include "cpu_rt/cpu_rt.cpp"
 
 using namespace rt;
 
@@ -77,6 +79,10 @@ main(void) {
   check_(sb.reserved == 128);
 
   dbg_check_(false);
+
+  Rt_Output rt_out = do_raytraycing();
+
+  write_png_or_panic("hello_raytraycing.png", rt_out.rgb_data, rt_out.image_size);
 
   while (!window_is_closed()) {
     win32_message_loop();

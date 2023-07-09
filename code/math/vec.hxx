@@ -21,6 +21,10 @@ union Vec3 {
   };
 
   struct {
+    f32 r, g, b;
+  };
+
+  struct {
     Vec2 xy;
     f32  _unused0;
   };
