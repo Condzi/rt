@@ -4,52 +4,110 @@ struct Ray {
   Vec3 direction;
 };
 
+struct Hit_Info {
+  Vec3 p;
+  Vec3 normal;
+  f32  t;
+  bool front_face;
+};
+
+struct Sphere {
+  Vec3 center;
+  f32  radius;
+};
+
+struct World {
+  Sphere *spheres;
+  s32     num_spheres;
+};
+
 [[nodiscard]] Vec3
-at(Ray const &r, double t) {
-  return r.origin + r.direction * (f32)t;
+at(Ray const &r, f32 t) {
+  return r.origin + r.direction * t;
 }
 
-[[nodiscard]] double
-hit_sphere(Vec3 const &center, double radius, Ray const &r) {
-  Vec3 oc           = r.origin - center;
-  auto a            = dot(r.direction, r.direction);
-  auto b            = 2.0 * dot(oc, r.direction);
-  auto c            = dot(oc, oc) - radius * radius;
-  auto discriminant = b * b - 4 * a * c;
+[[nodiscard]] bool
+hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
+  Vec3      oc           = r.origin - s.center;
+  f32 const a            = len_sq(r.direction);
+  f32 const half_b       = dot(oc, r.direction);
+  f32 const c            = len_sq(oc) - s.radius * s.radius;
+  f32 const discriminant = half_b * half_b - a * c;
+
   if (discriminant < 0) {
-    return -1.0;
-  } else {
-    return (-b - sqrt(discriminant)) / (2.0 * a);
+    return false;
   }
+
+  f32 const sd   = ::sqrtf(discriminant);
+  f32       root = (-half_b - sd) / a;
+
+  if (root < t_min || root > t_max) {
+    root = (-half_b + sd) / a;
+    if (root < t_min || root > t_max) {
+      return false;
+    }
+  }
+
+  hi.t = root;
+  hi.p = at(r, root);
+
+  Vec3 const outward_normal = (hi.p - s.center) * (1 / s.radius);
+  hi.front_face             = (dot(r.direction, outward_normal) < 0);
+  hi.normal                 = outward_normal * (hi.front_face ? 1.f : -1.f);
+
+  return true;
+}
+
+[[nodiscard]] bool
+hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
+  Hit_Info hi_temp;
+  bool     hit_anything = false;
+  f32      closest      = t_max;
+
+  for (s32 i = 0; i < w.num_spheres; i++) {
+    if (hit_sphere(r, w.spheres[i], t_min, closest, hi_temp)) {
+      hit_anything = true;
+      closest      = hi_temp.t;
+      hi           = hi_temp;
+    }
+  }
+
+  return hit_anything;
 }
 
 [[nodiscard]] Vec3
-ray_color(Ray const &r) {
-  double t = hit_sphere(Vec3 {0, 0, -1}, 0.5, r);
-  if (t > 0.0) {
-    Vec3 N = normalized(at(r, t) - Vec3 {0, 0, -1});
-    return Vec3 {N.x + 1, N.y + 1, N.z + 1} * 0.5;
+ray_color(Ray const &r, World const &w) {
+  Hit_Info hi;
+  if (hit_world(r, w, 0, FLT_MAX, hi)) {
+    return (hi.normal + Vec3 {1, 1, 1}) * 0.5f;
   }
 
-  Vec3 dir      = normalized(r.direction);
-  t             = 0.5 * (dir.y + 1.0);
-  double scalar = 1 - t;
+  Vec3  dir    = normalized(r.direction);
+  float t      = 0.5f * (dir.y + 1.0f);
+  f32   scalar = 1 - t;
 
-  Vec3 color = Vec3 {1, 1, 1} * (f32)scalar + Vec3 {0.5, 0.7, 1.0} * (f32)t;
+  Vec3 color = Vec3 {1, 1, 1} * scalar + Vec3 {0.5, 0.7, 1.0} * t;
   return color;
 }
 
 [[nodiscard]] Rt_Output
 do_raytraycing() {
-  double const aspect_ratio = 16.0 / 9;
-  s32 const    image_width  = 400;
-  s32 const    image_height = (s32)(image_width / aspect_ratio);
+  f32 const aspect_ratio = 16.0 / 9;
+  s32 const image_width  = 400;
+  s32 const image_height = (s32)(image_width / aspect_ratio);
 
+  // World
+  World w;
+  w.num_spheres = 2;
+  w.spheres     = (Sphere *)alloc_perm(2 * sizeof(*w.spheres));
+
+  w.spheres[0] = Sphere {.center = {0, 0, -1}, .radius = 0.5f};
+  w.spheres[1] = Sphere {.center = {0, -100.5f, -1}, .radius = 100.f};
   // Camera
 
-  double const viewport_height = 2.0;
-  double const viewport_width  = aspect_ratio * viewport_height;
-  double const focal_length    = 1.0;
+  f32 const viewport_height = 2.0;
+  f32 const viewport_width  = aspect_ratio * viewport_height;
+  f32 const focal_length    = 1.0;
 
   Vec3 const origin     = Vec3 {0, 0, 0};
   Vec3 const horizontal = Vec3 {viewport_width, 0, 0};
@@ -64,11 +122,10 @@ do_raytraycing() {
   for (int j = image_height - 1; j >= 0; --j) {
     logf("Scanlines remaining: %d\n", j);
     for (int i = 0; i < image_width; ++i) {
-      auto u = double(i) / (image_width - 1);
-      auto v = double(j) / (image_height - 1);
-      Ray  r {origin,
-             lower_left_corner + horizontal * (f32)u + vertical * (f32)v - origin};
-      Vec3 pixel_color = ray_color(r);
+      auto u = f32(i) / (image_width - 1);
+      auto v = f32(j) / (image_height - 1);
+      Ray  r {origin, lower_left_corner + horizontal * u + vertical * v - origin};
+      Vec3 pixel_color = ray_color(r, w);
 
       buffer[3 * (j * image_width + i)]     = u8(pixel_color.r * 255.999);
       buffer[3 * (j * image_width + i) + 1] = u8(pixel_color.g * 255.999);
