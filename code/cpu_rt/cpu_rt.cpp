@@ -99,7 +99,7 @@ do_raytraycing() {
   // World
   World w;
   w.num_spheres = 2;
-  w.spheres     = (Sphere *)alloc_perm(2 * sizeof(*w.spheres));
+  w.spheres     = (Sphere *)alloc_perm(w.num_spheres * sizeof(*w.spheres));
 
   w.spheres[0] = Sphere {.center = {0, 0, -1}, .radius = 0.5f};
   w.spheres[1] = Sphere {.center = {0, -100.5f, -1}, .radius = 100.f};
@@ -117,7 +117,8 @@ do_raytraycing() {
 
   // Render
 
-  u8 *buffer = (u8 *)alloc_perm(image_width * image_height * 3);
+  s32 constexpr static NUM_CHANNELS = 4;
+  u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
 
   for (int j = image_height - 1; j >= 0; --j) {
     logf("Scanlines remaining: %d\n", j);
@@ -127,13 +128,14 @@ do_raytraycing() {
       Ray  r {origin, lower_left_corner + horizontal * u + vertical * v - origin};
       Vec3 pixel_color = ray_color(r, w);
 
-      buffer[3 * (j * image_width + i)]     = u8(pixel_color.r * 255.999);
-      buffer[3 * (j * image_width + i) + 1] = u8(pixel_color.g * 255.999);
-      buffer[3 * (j * image_width + i) + 2] = u8(pixel_color.b * 255.999);
+      buffer[NUM_CHANNELS * (j * image_width + i)]     = u8(pixel_color.r * 255.999);
+      buffer[NUM_CHANNELS * (j * image_width + i) + 1] = u8(pixel_color.g * 255.999);
+      buffer[NUM_CHANNELS * (j * image_width + i) + 2] = u8(pixel_color.b * 255.999);
+      buffer[NUM_CHANNELS * (j * image_width + i) + 3] = 255;
     }
   }
 
   return {.image_size = {(f32)image_width, (f32)image_height},
-          .rgb_data   = {.count = image_width * image_height * 3, .bytes = buffer}};
+          .rgba_data   = {.count = image_width * image_height * 4, .bytes = buffer}};
 }
 } // namespace rt

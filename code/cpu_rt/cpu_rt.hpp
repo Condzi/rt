@@ -1,7 +1,7 @@
 namespace rt {
 struct Rt_Output {
   Vec2   image_size;
-  Buffer rgb_data;
+  Buffer rgba_data;
 };
 
 [[nodiscard]] Rt_Output

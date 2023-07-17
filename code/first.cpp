@@ -82,7 +82,7 @@ main(void) {
 
   Rt_Output rt_out = do_raytraycing();
 
-  write_png_or_panic("hello_raytraycing.png", rt_out.rgb_data, rt_out.image_size);
+  write_png_or_panic("hello_raytraycing.png", rt_out.rgba_data, rt_out.image_size);
 
   while (!window_is_closed()) {
     win32_message_loop();

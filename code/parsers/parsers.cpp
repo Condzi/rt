@@ -4,7 +4,7 @@
 namespace rt {
 void
 write_png_or_panic(char const *path, Buffer data, Vec2 size) {
-  s32 constexpr static NUM_OF_CHANNELS = 3; // RGB
+  s32 constexpr static NUM_OF_CHANNELS = 4; // RGBA
   s32 const width                      = (s32)size.width;
   s32 const height                     = (s32)size.height;
   s32 const stride                     = width * NUM_OF_CHANNELS;
