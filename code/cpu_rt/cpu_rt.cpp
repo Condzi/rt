@@ -136,6 +136,6 @@ do_raytraycing() {
   }
 
   return {.image_size = {(f32)image_width, (f32)image_height},
-          .rgba_data   = {.count = image_width * image_height * 4, .bytes = buffer}};
+          .rgba_data  = {.count = image_width * image_height * 4, .bytes = buffer}};
 }
 } // namespace rt

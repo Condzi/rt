@@ -82,7 +82,9 @@ main(void) {
 
   Rt_Output rt_out = do_raytraycing();
 
-  write_png_or_panic("hello_raytraycing.png", rt_out.rgba_data, rt_out.image_size);
+  // write_png_or_panic("hello_raytraycing.png", rt_out.rgba_data, rt_out.image_size);
+  ImTextureID const rt_out_as_texture =
+      dear_imgui_create_texture_from_rt_output(rt_out);
 
   while (!window_is_closed()) {
     win32_message_loop();
@@ -92,6 +94,11 @@ main(void) {
     gfx_im_rect({.x = 700, .y = 300}, {.width = 50, .height = 100}, COLOR_BLUE);
 
     dear_imgui_update();
+
+    ImGui::Begin("CPU Raytracing");
+    ImGui::Image(rt_out_as_texture,
+                 ImVec2(rt_out.image_size.width*2, rt_out.image_size.height*2));
+    ImGui::End();
 
     gfx_render();
   }
