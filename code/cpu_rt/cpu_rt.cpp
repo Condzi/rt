@@ -1,9 +1,6 @@
-namespace rt {
-struct Ray {
-  Vec3 origin;
-  Vec3 direction;
-};
+#include "camera.cxx"
 
+namespace rt {
 struct Hit_Info {
   Vec3 p;
   Vec3 normal;
@@ -103,17 +100,8 @@ do_raytraycing() {
 
   w.spheres[0] = Sphere {.center = {0, 0, -1}, .radius = 0.5f};
   w.spheres[1] = Sphere {.center = {0, -100.5f, -1}, .radius = 100.f};
-  // Camera
-
-  f32 const viewport_height = 2.0;
-  f32 const viewport_width  = aspect_ratio * viewport_height;
-  f32 const focal_length    = 1.0;
-
-  Vec3 const origin     = Vec3 {0, 0, 0};
-  Vec3 const horizontal = Vec3 {viewport_width, 0, 0};
-  Vec3 const vertical   = Vec3 {0, viewport_height, 0};
-  Vec3 const lower_left_corner =
-      origin - horizontal * 0.5 - vertical * 0.5 - Vec3 {0, 0, focal_length};
+  
+  Camera cam = make_camera();
 
   // Render
 
@@ -125,7 +113,7 @@ do_raytraycing() {
     for (int i = 0; i < image_width; ++i) {
       auto u = f32(i) / (image_width - 1);
       auto v = f32(j) / (image_height - 1);
-      Ray  r {origin, lower_left_corner + horizontal * u + vertical * v - origin};
+      Ray  r = get_ray_at(cam, u, v);
       Vec3 pixel_color = ray_color(r, w);
 
       buffer[NUM_CHANNELS * (j * image_width + i)]     = u8(pixel_color.r * 255.999);
