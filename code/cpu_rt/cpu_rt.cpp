@@ -100,7 +100,7 @@ do_raytraycing() {
 
   w.spheres[0] = Sphere {.center = {0, 0, -1}, .radius = 0.5f};
   w.spheres[1] = Sphere {.center = {0, -100.5f, -1}, .radius = 100.f};
-  
+
   Camera cam = make_camera();
 
   // Render
@@ -108,17 +108,28 @@ do_raytraycing() {
   s32 constexpr static NUM_CHANNELS = 4;
   u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
 
+  // @todo: move to ui
+  s32 const SAMPLES_PER_PIXEL = 100;
+  f32 const COLOR_SCALE       = 1.0f / SAMPLES_PER_PIXEL;
+
   for (int j = image_height - 1; j >= 0; --j) {
     logf("Scanlines remaining: %d\n", j);
     for (int i = 0; i < image_width; ++i) {
-      auto u = f32(i) / (image_width - 1);
-      auto v = f32(j) / (image_height - 1);
-      Ray  r = get_ray_at(cam, u, v);
-      Vec3 pixel_color = ray_color(r, w);
+      Vec3 pixel_color = {0, 0, 0};
+      for (s32 k = 0; k < SAMPLES_PER_PIXEL; k++) {
+        auto u = (f32(i) + random_f32()) / (image_width - 1);
+        auto v = (f32(j) + random_f32()) / (image_height - 1);
 
-      buffer[NUM_CHANNELS * (j * image_width + i)]     = u8(pixel_color.r * 255.999);
-      buffer[NUM_CHANNELS * (j * image_width + i) + 1] = u8(pixel_color.g * 255.999);
-      buffer[NUM_CHANNELS * (j * image_width + i) + 2] = u8(pixel_color.b * 255.999);
+        Ray r = get_ray_at(cam, u, v);
+        pixel_color = pixel_color + ray_color(r, w);
+      }
+
+      pixel_color = pixel_color * COLOR_SCALE;
+      pixel_color = clamp_vec3(pixel_color, 0.0f, 0.999f);
+
+      buffer[NUM_CHANNELS * (j * image_width + i)]     = u8(pixel_color.r * 255);
+      buffer[NUM_CHANNELS * (j * image_width + i) + 1] = u8(pixel_color.g * 255);
+      buffer[NUM_CHANNELS * (j * image_width + i) + 2] = u8(pixel_color.b * 255);
       buffer[NUM_CHANNELS * (j * image_width + i) + 3] = 255;
     }
   }
