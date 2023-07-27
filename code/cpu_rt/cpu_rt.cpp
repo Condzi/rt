@@ -73,10 +73,26 @@ hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
 }
 
 [[nodiscard]] Vec3
-ray_color(Ray const &r, World const &w) {
+ray_color(Ray const &r, World const &w, s32 depth) {
+  if (depth == 0) {
+    return Vec3 {0, 0, 0};
+  }
+
   Hit_Info hi;
-  if (hit_world(r, w, 0, FLT_MAX, hi)) {
-    return (hi.normal + Vec3 {1, 1, 1}) * 0.5f;
+  // @Note: 0.001 instead 0 fixes shadow acne
+  if (hit_world(r, w, 0.001f, FLT_MAX, hi)) {
+
+    // 3 alternative diffuse formulas
+#if 0
+    Vec3 const target = hi.p + hi.normal + random_in_unit_sphere();
+#elif 0
+    Vec3 const target = hi.p + hi.normal + random_unit_vector();
+#else
+    Vec3 const target = hi.p + random_in_hemisphere(hi.normal);
+#endif
+
+    Ray const r2 = {hi.p, target - hi.p};
+    return (ray_color(r2, w, depth - 1)) * 0.5f;
   }
 
   Vec3  dir    = normalized(r.direction);
@@ -110,7 +126,10 @@ do_raytraycing() {
 
   // @todo: move to ui
   s32 const SAMPLES_PER_PIXEL = 100;
-  f32 const COLOR_SCALE       = 1.0f / SAMPLES_PER_PIXEL;
+  // @todo: move to ui
+  s32 const MAX_DEPTH = 10;
+
+  f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
 
   for (int j = image_height - 1; j >= 0; --j) {
     logf("Scanlines remaining: %d\n", j);
@@ -120,11 +139,14 @@ do_raytraycing() {
         auto u = (f32(i) + random_f32()) / (image_width - 1);
         auto v = (f32(j) + random_f32()) / (image_height - 1);
 
-        Ray r = get_ray_at(cam, u, v);
-        pixel_color = pixel_color + ray_color(r, w);
+        Ray r       = get_ray_at(cam, u, v);
+        pixel_color = pixel_color + ray_color(r, w, MAX_DEPTH);
       }
 
       pixel_color = pixel_color * COLOR_SCALE;
+      pixel_color = Vec3 {.r = sqrt(pixel_color.r),
+                          .g = sqrt(pixel_color.g),
+                          .b = sqrt(pixel_color.b)};
       pixel_color = clamp_vec3(pixel_color, 0.0f, 0.999f);
 
       buffer[NUM_CHANNELS * (j * image_width + i)]     = u8(pixel_color.r * 255);
