@@ -107,6 +107,12 @@ dot(Vec3 a, Vec3 b);
 [[nodiscard]] f32
 dot(Vec4 a, Vec4 b);
 
+[[nodiscard]] bool
+near_zero(Vec2 v);
+
+[[nodiscard]] bool
+near_zero(Vec3 v);
+
 /**
  * Operators
  */

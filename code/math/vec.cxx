@@ -117,6 +117,16 @@ dot(Vec4 a, Vec4 b) {
   return (a.x + a.y + a.z + a.w);
 }
 
+[[nodiscard]] bool
+near_zero(Vec2 v) {
+  return f32_compare(v.x, 0) && f32_compare(v.y, 0);
+}
+
+[[nodiscard]] bool
+near_zero(Vec3 v) {
+  return f32_compare(v.x, 0) && f32_compare(v.y, 0) && f32_compare(v.z, 0);
+}
+
 /**
  * Operators
  */

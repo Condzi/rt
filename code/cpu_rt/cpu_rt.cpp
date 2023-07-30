@@ -1,16 +1,77 @@
 #include "camera.cxx"
 
 namespace rt {
+struct Material;
+
 struct Hit_Info {
-  Vec3 p;
-  Vec3 normal;
-  f32  t;
-  bool front_face;
+  Material *material;
+  Vec3      p;
+  Vec3      normal;
+  f32       t;
+  bool      front_face;
+};
+
+struct Material {
+  // Returns true when the ray was absorbed.
+  // Calculates the new color and ray.
+  virtual bool
+  scatter(Ray const &in, Hit_Info const &hi, Vec3 &attenuation_color, Ray &out) = 0;
+};
+
+struct Lambertian : Material {
+  Vec3 albedo;
+
+  Lambertian(Vec3 albedo_) : albedo(albedo_) {}
+
+  [[nodiscard]] bool
+  scatter(Ray const      &in,
+          Hit_Info const &hi,
+          Vec3           &attenuation_color,
+          Ray            &out) override {
+    (void)in;
+#if 0 // Alternative formulas
+    Vec3 scatter_direction = hi.normal + random_in_unit_sphere();
+    Vec3 scatter_direction = random_in_hemisphere(hi.normal);
+#endif
+    Vec3 scatter_direction = hi.normal + random_unit_vector();
+    if (near_zero(scatter_direction)) {
+      scatter_direction = hi.normal;
+    }
+
+    out               = {.origin = hi.p, .direction = scatter_direction};
+    attenuation_color = albedo;
+
+    return true;
+  }
+};
+
+[[nodiscard]] Vec3
+reflect(Vec3 v, Vec3 n) {
+  return v - n * 2 * dot(v, n);
+}
+
+struct Metal : Material {
+  Vec3 albedo;
+
+  Metal(Vec3 albedo_) : albedo(albedo_) {}
+
+  [[nodiscard]] bool
+  scatter(Ray const      &in,
+          Hit_Info const &hi,
+          Vec3           &attenuation_color,
+          Ray            &out) override {
+    Vec3 const reflected = reflect(normalized(in.direction), hi.normal);
+    out                  = {.origin = hi.p, .direction = reflected};
+
+    attenuation_color = albedo;
+    return (dot(out.direction, hi.normal) > 0);
+  }
 };
 
 struct Sphere {
-  Vec3 center;
-  f32  radius;
+  Vec3      center;
+  f32       radius;
+  Material *material;
 };
 
 struct World {
@@ -51,6 +112,7 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   Vec3 const outward_normal = (hi.p - s.center) * (1 / s.radius);
   hi.front_face             = (dot(r.direction, outward_normal) < 0);
   hi.normal                 = outward_normal * (hi.front_face ? 1.f : -1.f);
+  hi.material               = s.material;
 
   return true;
 }
@@ -81,18 +143,14 @@ ray_color(Ray const &r, World const &w, s32 depth) {
   Hit_Info hi;
   // @Note: 0.001 instead 0 fixes shadow acne
   if (hit_world(r, w, 0.001f, FLT_MAX, hi)) {
+    Ray  scattered;
+    Vec3 attenuated_color;
 
-    // 3 alternative diffuse formulas
-#if 0
-    Vec3 const target = hi.p + hi.normal + random_in_unit_sphere();
-#elif 0
-    Vec3 const target = hi.p + hi.normal + random_unit_vector();
-#else
-    Vec3 const target = hi.p + random_in_hemisphere(hi.normal);
-#endif
-
-    Ray const r2 = {hi.p, target - hi.p};
-    return (ray_color(r2, w, depth - 1)) * 0.5f;
+    if (hi.material->scatter(r, hi, attenuated_color, scattered)) {
+      return attenuated_color * ray_color(scattered, w, depth - 1);
+    } else {
+      return Vec3 {0, 0, 0};
+    }
   }
 
   Vec3  dir    = normalized(r.direction);
@@ -111,11 +169,20 @@ do_raytraycing() {
 
   // World
   World w;
-  w.num_spheres = 2;
+  w.num_spheres = 4;
   w.spheres     = (Sphere *)alloc_perm(w.num_spheres * sizeof(*w.spheres));
 
-  w.spheres[0] = Sphere {.center = {0, 0, -1}, .radius = 0.5f};
-  w.spheres[1] = Sphere {.center = {0, -100.5f, -1}, .radius = 100.f};
+  Lambertian mat_ground{Vec3{0.8, 0.8, 0.0}};
+  Lambertian mat_center{Vec3{0.7, 0.3, 0.3}};
+  Metal      mat_left{Vec3{0.8, 0.8, 0.8}};
+  Metal      mat_right{Vec3{0.8, 0.6, 0.2}};
+
+
+  w.spheres[0] = Sphere {.center = {0, -100.5f, -1}, .radius = 100.f, .material = &mat_ground};
+  w.spheres[1] = Sphere {.center = {0, 0, -1}, .radius = 0.5f, .material = &mat_center};
+  w.spheres[2] = Sphere {.center = {-1, 0, -1}, .radius = 0.5f, .material = &mat_left};
+  w.spheres[3] = Sphere {.center = {1, 0, -1}, .radius = 0.5f, .material = &mat_right};
+
 
   Camera cam = make_camera();
 
