@@ -84,9 +84,9 @@ refract(Vec3 uv, Vec3 n, f32 etai_over_etat) {
 [[nodiscard]] f32
 reflactance(f32 cosine, f32 refraction_index) {
   f32 r0 = (1 - refraction_index) / (1 + refraction_index);
-  r0 = r0*r0;
+  r0     = r0 * r0;
 
-  return r0 + (1 - r0)*::powf((1 - cosine), 5);
+  return r0 + (1 - r0) * ::powf((1 - cosine), 5);
 }
 
 struct Dielectric : Material {
@@ -107,7 +107,8 @@ struct Dielectric : Material {
     f32 const  sin_theta      = ::sqrt(1.0f - cos_theta * cos_theta);
 
     bool const can_refract = (refraction_ratio * sin_theta) <= 1.0f;
-    bool const reflactance_test = reflactance(cos_theta, refraction_ratio) > random_f32();
+    bool const reflactance_test =
+        reflactance(cos_theta, refraction_ratio) > random_f32();
 
     Vec3 direction;
     if (can_refract && !reflactance_test) {
@@ -222,6 +223,16 @@ do_raytraycing() {
   s32 const image_width  = 400;
   s32 const image_height = (s32)(image_width / aspect_ratio);
 
+  // Camera setup
+  Vec3 const lookfrom {3, 3, 2};
+  Vec3 const lookat {0, 0, -1};
+  Vec3 const vup {0, 1, 0};
+  f32 const  dist_to_focus = dist(lookfrom, lookat);
+  f32 const  aperture      = 2.0;
+
+  Camera cam = make_camera(
+      lookfrom, lookat, vup, 20.0f, aspect_ratio, aperture, dist_to_focus);
+
   // World
   World w;
   w.num_spheres = 5;
@@ -242,8 +253,6 @@ do_raytraycing() {
       Sphere {.center = {-1, 0, -1}, .radius = -0.4f, .material = &mat_left};
   w.spheres[4] =
       Sphere {.center = {1, 0, -1}, .radius = 0.5f, .material = &mat_right};
-
-  Camera cam = make_camera(Vec3{-2, 2, 1}, Vec3{0,0,-1}, Vec3{0,1,0}, 20.0f, aspect_ratio);
 
   // Render
 

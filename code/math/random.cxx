@@ -56,4 +56,18 @@ random_in_hemisphere(Vec3 normal) {
 
   return result;
 }
+
+[[nodiscard]] Vec3
+random_in_unit_disk() {
+  // @Robustness @Performance doesn't look too good
+  while (true) {
+    Vec3 const p = {random_f32_in_range(-1, 1), random_f32_in_range(-1, 1), 0};
+
+    if (len_sq(p) >= 1) {
+      continue;
+    }
+
+    return p;
+  }
+}
 } // namespace rt

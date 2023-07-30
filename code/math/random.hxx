@@ -19,4 +19,7 @@ random_unit_vector();
 
 [[nodiscard]] Vec3
 random_in_hemisphere(Vec3 normal);
+
+[[nodiscard]] Vec3
+random_in_unit_disk();
 } // namespace rt
