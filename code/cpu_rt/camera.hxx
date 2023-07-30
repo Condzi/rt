@@ -8,7 +8,7 @@ struct Camera {
 };
 
 [[nodiscard]] Camera
-make_camera();
+make_camera(Vec3 center, Vec3 look_at, Vec3 up, f32 vfow, f32 aspect_ratio);
 
 [[nodiscard]] Ray
 get_ray_at(Camera const &cam, f32 u, f32 v);

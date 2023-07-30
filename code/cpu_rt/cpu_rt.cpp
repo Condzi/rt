@@ -243,7 +243,7 @@ do_raytraycing() {
   w.spheres[4] =
       Sphere {.center = {1, 0, -1}, .radius = 0.5f, .material = &mat_right};
 
-  Camera cam = make_camera();
+  Camera cam = make_camera(Vec3{-2, 2, 1}, Vec3{0,0,-1}, Vec3{0,1,0}, 20.0f, aspect_ratio);
 
   // Render
 

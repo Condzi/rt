@@ -117,6 +117,16 @@ dot(Vec4 a, Vec4 b) {
   return (a.x + a.y + a.z + a.w);
 }
 
+[[nodiscard]] Vec3
+cross(Vec3 a, Vec3 b) {
+  Vec3 c;
+  c.x = a.y * b.z - a.z * b.y;
+  c.y = a.z * b.x - a.x * b.z;
+  c.z = a.x * b.y - a.y * b.x;
+
+  return c;
+}
+
 [[nodiscard]] bool
 near_zero(Vec2 v) {
   return f32_compare(v.x, 0) && f32_compare(v.y, 0);

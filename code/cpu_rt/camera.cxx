@@ -1,16 +1,21 @@
 namespace rt {
 [[nodiscard]] Camera
-make_camera() {
-  f32 const aspect_ratio    = 16.0 / 9;
-  f32 const viewport_height = 2.0;
-  f32 const viewport_width  = aspect_ratio * viewport_height;
-  f32 const focal_length    = 1.0;
+make_camera(Vec3 center, Vec3 look_at, Vec3 up, f32 vfow, f32 aspect_ratio) {
+  f32 const theta = 3.1415f * vfow / 180;
+  f32 const h     = ::tanf(theta / 2);
 
-  Vec3 const origin     = {0, 0, 0};
-  Vec3 const horizontal = {viewport_width, 0, 0};
-  Vec3 const vertical   = {0, viewport_height, 0};
+  f32 const viewport_height = 2.0f * h;
+  f32 const viewport_width  = aspect_ratio * viewport_height;
+
+  Vec3 const w = normalized(center - look_at);
+  Vec3 const u = normalized(cross(up, w));
+  Vec3 const v = cross(w, u);
+
+  Vec3 const origin     = center;
+  Vec3 const horizontal = u*viewport_width;
+  Vec3 const vertical   = v*viewport_height;
   Vec3 const lower_left_corner =
-      origin - horizontal * 0.5 - vertical * 0.5 - Vec3 {0, 0, focal_length};
+      origin - horizontal * 0.5 - vertical * 0.5 - w;
 
   Camera result = {.origin            = origin,
                    .horizontal        = horizontal,
@@ -21,10 +26,10 @@ make_camera() {
 } // namespace rt
 
 [[nodiscard]] Ray
-get_ray_at(Camera const &cam, f32 u, f32 v) {
+get_ray_at(Camera const &cam, f32 s, f32 t) {
   Ray result = {.origin    = cam.origin,
-                .direction = cam.lower_left_corner + cam.horizontal * u +
-                             cam.vertical * v - cam.origin};
+                .direction = cam.lower_left_corner + cam.horizontal * s +
+                             cam.vertical * t - cam.origin};
   return result;
 }
 } // namespace rt
