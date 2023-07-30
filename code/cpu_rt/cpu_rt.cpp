@@ -170,6 +170,7 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   hi.normal                 = outward_normal * (hi.front_face ? 1.f : -1.f);
   hi.material               = s.material;
 
+  assert(hi.material);
   return true;
 }
 
@@ -179,11 +180,13 @@ hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
   bool     hit_anything = false;
   f32      closest      = t_max;
 
+  s32 hit_idx = -1;
   for (s32 i = 0; i < w.num_spheres; i++) {
     if (hit_sphere(r, w.spheres[i], t_min, closest, hi_temp)) {
       hit_anything = true;
       closest      = hi_temp.t;
       hi           = hi_temp;
+      hit_idx      = i;
     }
   }
 
@@ -217,42 +220,27 @@ ray_color(Ray const &r, World const &w, s32 depth) {
   return color;
 }
 
+[[nodiscard]] World
+random_scene();
+
 [[nodiscard]] Rt_Output
 do_raytraycing() {
-  f32 const aspect_ratio = 16.0 / 9;
-  s32 const image_width  = 400;
+  f32 const aspect_ratio = 3 / 2.f;
+  s32 const image_width  = 1200;
   s32 const image_height = (s32)(image_width / aspect_ratio);
 
   // Camera setup
-  Vec3 const lookfrom {3, 3, 2};
-  Vec3 const lookat {0, 0, -1};
+  Vec3 const lookfrom {13, 2, 3};
+  Vec3 const lookat {0, 0, 0};
   Vec3 const vup {0, 1, 0};
-  f32 const  dist_to_focus = dist(lookfrom, lookat);
-  f32 const  aperture      = 2.0;
+  f32 const  dist_to_focus = 10.0f;
+  f32 const  aperture      = 0.1f;
 
   Camera cam = make_camera(
       lookfrom, lookat, vup, 20.0f, aspect_ratio, aperture, dist_to_focus);
 
   // World
-  World w;
-  w.num_spheres = 5;
-  w.spheres     = (Sphere *)alloc_perm(w.num_spheres * sizeof(*w.spheres));
-
-  Lambertian mat_ground {Vec3 {0.8, 0.8, 0.0}};
-  Lambertian mat_center {Vec3 {0.1, 0.2, 0.5}};
-  Dielectric mat_left {1.5};
-  Metal      mat_right {Vec3 {0.8, 0.6, 0.2}, 0.0};
-
-  w.spheres[0] =
-      Sphere {.center = {0, -100.5f, -1}, .radius = 100.f, .material = &mat_ground};
-  w.spheres[1] =
-      Sphere {.center = {0, 0, -1}, .radius = 0.5f, .material = &mat_center};
-  w.spheres[2] =
-      Sphere {.center = {-1, 0, -1}, .radius = 0.5f, .material = &mat_left};
-  w.spheres[3] =
-      Sphere {.center = {-1, 0, -1}, .radius = -0.4f, .material = &mat_left};
-  w.spheres[4] =
-      Sphere {.center = {1, 0, -1}, .radius = 0.5f, .material = &mat_right};
+  World w = random_scene();
 
   // Render
 
@@ -260,9 +248,9 @@ do_raytraycing() {
   u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
 
   // @todo: move to ui
-  s32 const SAMPLES_PER_PIXEL = 100;
+  s32 const SAMPLES_PER_PIXEL = 500;
   // @todo: move to ui
-  s32 const MAX_DEPTH = 10;
+  s32 const MAX_DEPTH = 50;
 
   f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
 
@@ -293,5 +281,78 @@ do_raytraycing() {
 
   return {.image_size = {(f32)image_width, (f32)image_height},
           .rgba_data  = {.count = image_width * image_height * 4, .bytes = buffer}};
+}
+
+[[nodiscard]] World
+random_scene() {
+  World w;
+  w.num_spheres = 22 * 22 + 2;
+  w.spheres     = (Sphere *)alloc_perm(w.num_spheres * sizeof(Sphere));
+
+  Lambertian *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  new (ground_material) Lambertian {Vec3 {0.5, 0.5, 0.5}};
+  w.spheres[0] = Sphere {Vec3 {0, -1000, 0}, 1000, ground_material};
+
+  s32 sphere_idx        = 1;
+  s32 iteration_counter = 0;
+
+  for (s32 a = -11; a < 11; a++) {
+    for (s32 b = -11; b < 11; b++) {
+      iteration_counter++;
+      // Space for 3 giant spheres, added outside the loop
+      if (w.num_spheres - sphere_idx == 3) {
+        continue;
+      }
+
+      Vec3 const center {a + 0.9f * random_f32(), 0.2f, b + 0.9f * random_f32()};
+
+      if (dist(center, Vec3 {4, 0.2f, 0}) < 0.9f) {
+        continue;
+      }
+
+      f32 const choose_mat = random_f32();
+      if (choose_mat < 0.8f) {
+        Vec3 const  albedo = random_vec3() * random_vec3();
+        Lambertian *mat    = (Lambertian *)alloc_perm(sizeof(Lambertian));
+        new (mat) Lambertian {albedo};
+        w.spheres[sphere_idx] = Sphere {center, 0.2f, mat};
+      } else if (choose_mat < 0.95f) {
+        Vec3 const albedo = random_vec3_in_range(0.5f, 1);
+        f32 const  fuzz   = random_f32_in_range(0, 0.5f);
+        Metal     *mat    = (Metal *)alloc_perm(sizeof(Metal));
+        new (mat) Metal {albedo, fuzz};
+        w.spheres[sphere_idx] = Sphere {center, 0.2f, mat};
+      } else {
+        Dielectric *mat = (Dielectric *)alloc_perm(sizeof(Dielectric));
+        new (mat) Dielectric {1.5f};
+        w.spheres[sphere_idx] = Sphere {center, 0.2f, mat};
+      }
+
+      sphere_idx++;
+    }
+  }
+  logf("%d iterations \n", iteration_counter);
+
+  Dielectric *mat1 = (Dielectric *)alloc_perm(sizeof(Dielectric));
+  new (mat1) Dielectric {1.5f};
+
+  Lambertian *mat2 = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  new (mat2) Lambertian {Vec3 {0.4f, 0.2f, 0.1f}};
+
+  Metal *mat3 = (Metal *)alloc_perm(sizeof(Metal));
+  new (mat3) Metal {Vec3 {0.7f, 0.6f, 0.5f}, 0.0f};
+
+  w.spheres[sphere_idx] = Sphere {Vec3 {0, 1, 0}, 1.0, mat1};
+  sphere_idx++;
+  w.spheres[sphere_idx] = Sphere {Vec3 {-4, 1, 0}, 1.0, mat2};
+  sphere_idx++;
+  w.spheres[sphere_idx] = Sphere {Vec3 {4, 1, 0}, 1.0, mat3};
+  sphere_idx++;
+
+  logf("%d/%d spheres generated.\n", sphere_idx, w.num_spheres);
+  assert(sphere_idx <= w.num_spheres);
+  w.num_spheres = sphere_idx;
+
+  return w;
 }
 } // namespace rt

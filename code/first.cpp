@@ -97,7 +97,7 @@ main(void) {
 
     ImGui::Begin("CPU Raytracing");
     ImGui::Image(rt_out_as_texture,
-                 ImVec2(rt_out.image_size.width * 2, rt_out.image_size.height * 2));
+                 ImVec2(rt_out.image_size.width, rt_out.image_size.height));
     ImGui::End();
 
     gfx_render();
