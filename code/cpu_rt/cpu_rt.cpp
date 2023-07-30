@@ -52,7 +52,7 @@ reflect(Vec3 v, Vec3 n) {
 
 struct Metal : Material {
   Vec3 albedo;
-  f32 fuzz;
+  f32  fuzz;
 
   Metal(Vec3 albedo_, f32 fuzz_) : albedo(albedo_), fuzz(fuzz_ < 1 ? fuzz_ : 1) {}
 
@@ -62,7 +62,7 @@ struct Metal : Material {
           Vec3           &attenuation_color,
           Ray            &out) override {
     Vec3 const reflected = reflect(normalized(in.direction), hi.normal);
-    Vec3 const direction = reflected + random_in_unit_sphere()*fuzz;
+    Vec3 const direction = reflected + random_in_unit_sphere() * fuzz;
     out                  = {.origin = hi.p, .direction = direction};
 
     attenuation_color = albedo;
@@ -70,9 +70,62 @@ struct Metal : Material {
   }
 };
 
+// from Snell's law
+[[nodiscard]] Vec3
+refract(Vec3 uv, Vec3 n, f32 etai_over_etat) {
+  f32 const  cos_theta      = fmin(dot(uv * -1.f, n), 1.0);
+  Vec3 const r_out_perp     = (uv + n * cos_theta) * etai_over_etat;
+  Vec3 const r_out_parallel = n * (-::sqrtf(::fabsf(1.0f - len_sq(r_out_perp))));
+
+  return r_out_perp + r_out_parallel;
+}
+
+// Schlick's approximation of reflactance
+[[nodiscard]] f32
+reflactance(f32 cosine, f32 refraction_index) {
+  f32 r0 = (1 - refraction_index) / (1 + refraction_index);
+  r0 = r0*r0;
+
+  return r0 + (1 - r0)*::powf((1 - cosine), 5);
+}
+
+struct Dielectric : Material {
+  f32 refraction_index;
+
+  Dielectric(f32 refraction_index_) : refraction_index(refraction_index_) {}
+
+  [[nodiscard]] bool
+  scatter(Ray const      &in,
+          Hit_Info const &hi,
+          Vec3           &attenuation_color,
+          Ray            &out) override {
+    f32 const refraction_ratio =
+        hi.front_face ? (1.0f / refraction_index) : (refraction_index);
+
+    Vec3 const unit_direction = normalized(in.direction);
+    f32 const  cos_theta      = fmin(dot(unit_direction * -1.f, hi.normal), 1.0);
+    f32 const  sin_theta      = ::sqrt(1.0f - cos_theta * cos_theta);
+
+    bool const can_refract = (refraction_ratio * sin_theta) <= 1.0f;
+    bool const reflactance_test = reflactance(cos_theta, refraction_ratio) > random_f32();
+
+    Vec3 direction;
+    if (can_refract && !reflactance_test) {
+      direction = refract(unit_direction, hi.normal, refraction_ratio);
+    } else {
+      direction = reflect(unit_direction, hi.normal);
+    }
+
+    out               = {.origin = hi.p, .direction = direction};
+    attenuation_color = Vec3 {1.0f, 1.0f, 1.0f};
+
+    return true;
+  }
+};
+
 struct Sphere {
   Vec3      center;
-  f32       radius;
+  f32       radius; // @Note: can be negative: surface normals will point inward.
   Material *material;
 };
 
@@ -171,20 +224,24 @@ do_raytraycing() {
 
   // World
   World w;
-  w.num_spheres = 4;
+  w.num_spheres = 5;
   w.spheres     = (Sphere *)alloc_perm(w.num_spheres * sizeof(*w.spheres));
 
-  Lambertian mat_ground{Vec3{0.8, 0.8, 0.0}};
-  Lambertian mat_center{Vec3{0.7, 0.3, 0.3}};
-  Metal      mat_left{Vec3{0.8, 0.8, 0.8}, 0.3};
-  Metal      mat_right{Vec3{0.8, 0.6, 0.2}, 1.0};
+  Lambertian mat_ground {Vec3 {0.8, 0.8, 0.0}};
+  Lambertian mat_center {Vec3 {0.1, 0.2, 0.5}};
+  Dielectric mat_left {1.5};
+  Metal      mat_right {Vec3 {0.8, 0.6, 0.2}, 0.0};
 
-
-  w.spheres[0] = Sphere {.center = {0, -100.5f, -1}, .radius = 100.f, .material = &mat_ground};
-  w.spheres[1] = Sphere {.center = {0, 0, -1}, .radius = 0.5f, .material = &mat_center};
-  w.spheres[2] = Sphere {.center = {-1, 0, -1}, .radius = 0.5f, .material = &mat_left};
-  w.spheres[3] = Sphere {.center = {1, 0, -1}, .radius = 0.5f, .material = &mat_right};
-
+  w.spheres[0] =
+      Sphere {.center = {0, -100.5f, -1}, .radius = 100.f, .material = &mat_ground};
+  w.spheres[1] =
+      Sphere {.center = {0, 0, -1}, .radius = 0.5f, .material = &mat_center};
+  w.spheres[2] =
+      Sphere {.center = {-1, 0, -1}, .radius = 0.5f, .material = &mat_left};
+  w.spheres[3] =
+      Sphere {.center = {-1, 0, -1}, .radius = -0.4f, .material = &mat_left};
+  w.spheres[4] =
+      Sphere {.center = {1, 0, -1}, .radius = 0.5f, .material = &mat_right};
 
   Camera cam = make_camera();
 

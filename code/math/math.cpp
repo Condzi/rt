@@ -24,4 +24,18 @@ clamp_vec3(Vec3 x, f32 min, f32 max) {
 
   return x;
 }
+
+[[nodiscard]] f32
+fmin(f32 a, f32 b) {
+  if (a < b) return a;
+
+  return b;
+}
+
+[[nodiscard]] f32
+fmax(f32 a, f32 b) {
+  if (a < b) return b;
+  
+  return a;
+}
 } // namespace rt
