@@ -52,8 +52,9 @@ reflect(Vec3 v, Vec3 n) {
 
 struct Metal : Material {
   Vec3 albedo;
+  f32 fuzz;
 
-  Metal(Vec3 albedo_) : albedo(albedo_) {}
+  Metal(Vec3 albedo_, f32 fuzz_) : albedo(albedo_), fuzz(fuzz_ < 1 ? fuzz_ : 1) {}
 
   [[nodiscard]] bool
   scatter(Ray const      &in,
@@ -61,7 +62,8 @@ struct Metal : Material {
           Vec3           &attenuation_color,
           Ray            &out) override {
     Vec3 const reflected = reflect(normalized(in.direction), hi.normal);
-    out                  = {.origin = hi.p, .direction = reflected};
+    Vec3 const direction = reflected + random_in_unit_sphere()*fuzz;
+    out                  = {.origin = hi.p, .direction = direction};
 
     attenuation_color = albedo;
     return (dot(out.direction, hi.normal) > 0);
@@ -174,8 +176,8 @@ do_raytraycing() {
 
   Lambertian mat_ground{Vec3{0.8, 0.8, 0.0}};
   Lambertian mat_center{Vec3{0.7, 0.3, 0.3}};
-  Metal      mat_left{Vec3{0.8, 0.8, 0.8}};
-  Metal      mat_right{Vec3{0.8, 0.6, 0.2}};
+  Metal      mat_left{Vec3{0.8, 0.8, 0.8}, 0.3};
+  Metal      mat_right{Vec3{0.8, 0.6, 0.2}, 1.0};
 
 
   w.spheres[0] = Sphere {.center = {0, -100.5f, -1}, .radius = 100.f, .material = &mat_ground};
