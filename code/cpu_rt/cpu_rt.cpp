@@ -223,39 +223,25 @@ ray_color(Ray const &r, World const &w, s32 depth) {
 [[nodiscard]] World
 random_scene();
 
-[[nodiscard]] Rt_Output
-do_raytraycing() {
-  f32 const aspect_ratio = 3 / 2.f;
-  s32 const image_width  = 1200;
-  s32 const image_height = (s32)(image_width / aspect_ratio);
+s32 constexpr static NUM_CHANNELS = 4;
+// @todo: move to ui
+s32 const SAMPLES_PER_PIXEL = 100; // 500
+// @todo: move to ui
+s32 const MAX_DEPTH = 10; // 50
 
-  // Camera setup
-  Vec3 const lookfrom {13, 2, 3};
-  Vec3 const lookat {0, 0, 0};
-  Vec3 const vup {0, 1, 0};
-  f32 const  dist_to_focus = 10.0f;
-  f32 const  aperture      = 0.1f;
+f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
 
-  Camera cam = make_camera(
-      lookfrom, lookat, vup, 20.0f, aspect_ratio, aperture, dist_to_focus);
-
-  // World
-  World w = random_scene();
-
-  // Render
-
-  s32 constexpr static NUM_CHANNELS = 4;
-  u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
-
-  // @todo: move to ui
-  s32 const SAMPLES_PER_PIXEL = 500;
-  // @todo: move to ui
-  s32 const MAX_DEPTH = 50;
-
-  f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
-
-  for (int j = image_height - 1; j >= 0; --j) {
-    logf("Scanlines remaining: %d\n", j);
+// called by std::thread
+// no logging because concurrency stuff
+void
+rt_loop(s32     start_height,
+        s32     end_height,
+        s32     image_width,
+        s32     image_height,
+        u8     *buffer,
+        World  &w,
+        Camera &cam) {
+  for (int j = end_height; j >= start_height; --j) {
     for (int i = 0; i < image_width; ++i) {
       Vec3 pixel_color = {0, 0, 0};
       for (s32 k = 0; k < SAMPLES_PER_PIXEL; k++) {
@@ -278,6 +264,53 @@ do_raytraycing() {
       buffer[NUM_CHANNELS * (j * image_width + i) + 3] = 255;
     }
   }
+}
+
+[[nodiscard]] Rt_Output
+do_raytraycing() {
+  f32 const aspect_ratio = 3 / 2.f;
+  s32 const image_width  = 1000;
+  s32 const image_height = (s32)(image_width / aspect_ratio);
+
+  // Camera setup
+  Vec3 const lookfrom {13, 2, 3};
+  Vec3 const lookat {0, 0, 0};
+  Vec3 const vup {0, 1, 0};
+  f32 const  dist_to_focus = 10.0f;
+  f32 const  aperture      = 0.1f;
+
+  // Static so it doesnt go out of stack
+  static Camera cam = make_camera(
+      lookfrom, lookat, vup, 20.0f, aspect_ratio, aperture, dist_to_focus);
+
+  // World
+  // Static so it doesnt go out of stack
+  static World w = random_scene();
+
+  // Render
+
+  u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
+
+  s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
+  // @Fixme: If the modulo is not 0, we will have leftover scanlines
+  s32 const y_per_thread = image_height / num_of_threads_supported;
+  logf("%d therads -- %d scanlines per thread\n",
+       num_of_threads_supported,
+       y_per_thread);
+
+  for (s32 i = 0; i < num_of_threads_supported; i++) {
+    std::thread([=] {
+      rt_loop(i * y_per_thread,
+              (i + 1) * y_per_thread - 1,
+              image_width,
+              image_height,
+              buffer,
+              w,
+              cam);
+    }).detach();
+  }
+
+  // No need to wait because everything will be updated in realtime.
 
   return {.image_size = {(f32)image_width, (f32)image_height},
           .rgba_data  = {.count = image_width * image_height * 4, .bytes = buffer}};

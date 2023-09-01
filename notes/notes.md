@@ -30,20 +30,19 @@ This will prevent the window module from being too specific / tied to other modu
 
 
 potential problems:
-- camera
 - editor
 
 # To do / priority
 
 - CPU Raytraycer (based on "rt in one weekend")
-  - output to a D3D texture
-  - ray-ball
-  - antialiasing
-  - rng
-  - camera
-  - diffuse material \w true lambertian
-  - metal metarial
-  - dielectric material (glass)
+  - lights
+  - 3D models?
+
+- Wrapping up
+  - performance benchmark (low hanging fruits at least)
+  - code refactoring
+
+- Moving to compute shaders
 
 - UTF-8, use String everywhere & rewrite the tprint to accept it.
 

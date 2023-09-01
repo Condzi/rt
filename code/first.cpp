@@ -4,6 +4,8 @@
 #include <cfloat>
 #include <cmath>
 #include <stdarg.h> // logf
+#include <thread>
+#include <mutex>
 
 #include "first.hpp"
 
@@ -83,8 +85,6 @@ main(void) {
   Rt_Output rt_out = do_raytraycing();
 
   // write_png_or_panic("hello_raytraycing.png", rt_out.rgba_data, rt_out.image_size);
-  ImTextureID const rt_out_as_texture =
-      dear_imgui_create_texture_from_rt_output(rt_out);
 
   while (!window_is_closed()) {
     win32_message_loop();
@@ -96,11 +96,19 @@ main(void) {
     dear_imgui_update();
 
     ImGui::Begin("CPU Raytracing");
+    // @Note: we do it over and over again because RT is raytracing all the time
+    //       In future just add an atomic that counts number of threads finished.
+    ImTextureID rt_out_as_texture = dear_imgui_create_texture_from_rt_output(rt_out);
     ImGui::Image(rt_out_as_texture,
                  ImVec2(rt_out.image_size.width, rt_out.image_size.height));
     ImGui::End();
 
     gfx_render();
+
+    clear_temp_mem();
+
+    auto res = (ID3D11ShaderResourceView*)rt_out_as_texture;
+    d3d_safe_release_(res);
   }
 
   logf("Goodbye :)\n");

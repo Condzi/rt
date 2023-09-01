@@ -59,8 +59,12 @@ dear_imgui_create_texture_from_rt_output(Rt_Output const &rt_out) {
   auto const  width  = (::UINT)rt_out.image_size.width;
   auto const  height = (::UINT)rt_out.image_size.height;
   void const *pixels = rt_out.rgba_data.bytes;
+  s32 const   bytes_per_pixel = 4;
+  u8         *temp_img        = (u8 *)alloc_temp(width * height * bytes_per_pixel);
 
-  flip_image(rt_out.rgba_data.bytes, width, height);
+  ::memcpy(temp_img, pixels, width * height * bytes_per_pixel);
+
+  flip_image(temp_img, width, height);
   // Create the Direct3D texture
   D3D11_TEXTURE2D_DESC const desc {.Width      = width,
                                    .Height     = height,
@@ -71,7 +75,7 @@ dear_imgui_create_texture_from_rt_output(Rt_Output const &rt_out) {
                                    .Usage      = D3D11_USAGE_DEFAULT,
                                    .BindFlags  = D3D11_BIND_SHADER_RESOURCE};
 
-  D3D11_SUBRESOURCE_DATA const sub_resource {.pSysMem     = pixels,
+  D3D11_SUBRESOURCE_DATA const sub_resource {.pSysMem     = temp_img,
                                              .SysMemPitch = desc.Width * 4};
 
   ::HRESULT        hr;

@@ -65,5 +65,6 @@ pop_temp_mem_mark(s64 size) {
 void
 clear_temp_mem() {
   ::memset(gMemory_State.temp_memory.bytes, 0, gMemory_State.temp_mark);
+  gMemory_State.temp_mark = 0;
 }
 } // namespace rt
