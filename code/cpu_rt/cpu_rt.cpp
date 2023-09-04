@@ -140,10 +140,52 @@ at(Ray const &r, f32 t) {
   return r.origin + r.direction * t;
 }
 
+// 12.5s
+[[nodiscard]] bool
+hit_sphere_v2(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
+  Vec3 oc = r.origin - s.center;
+
+  // Inline len_sq and dot
+  f32 a = r.direction.x * r.direction.x + r.direction.y * r.direction.y +
+          r.direction.z * r.direction.z;
+  f32 half_b = oc.x * r.direction.x + oc.y * r.direction.y + oc.z * r.direction.z;
+  f32 c      = oc.x * oc.x + oc.y * oc.y + oc.z * oc.z - s.radius * s.radius;
+  f32 discriminant = half_b * half_b - a * c;
+
+  if (discriminant < 0) {
+    return false;
+  }
+
+  f32 sd = ::sqrtf(discriminant);
+
+  // Optimized root calculation
+  f32 root1 = (-half_b - sd) / a;
+  f32 root2 = (-half_b + sd) / a;
+  f32 root  = (root1 < t_max && root1 > t_min)   ? root1
+              : (root2 < t_max && root2 > t_min) ? root2
+                                                 : -1;
+
+  if (root == -1) return false;
+
+  hi.t = root;
+  hi.p = at(r, root);
+
+  f32  inv_radius     = 1 / s.radius;
+  Vec3 outward_normal = (hi.p - s.center) * inv_radius;
+
+  hi.front_face = (dot(r.direction, outward_normal) < 0);
+  hi.normal     = outward_normal * (hi.front_face ? 1.f : -1.f);
+  hi.material   = s.material;
+
+  assert(hi.material);
+  return true;
+}
+
+// 14s
 [[nodiscard]] bool
 hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   Vec3      oc           = r.origin - s.center;
-  f32 const a            = len_sq(r.direction);
+  f32 const a = len_sq(r.direction); // dot(a, a), dot(a,b) = (a.x*b.x +...)
   f32 const half_b       = dot(oc, r.direction);
   f32 const c            = len_sq(oc) - s.radius * s.radius;
   f32 const discriminant = half_b * half_b - a * c;
@@ -182,6 +224,7 @@ hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
 
   s32 hit_idx = -1;
   for (s32 i = 0; i < w.num_spheres; i++) {
+    // @Hot
     if (hit_sphere(r, w.spheres[i], t_min, closest, hi_temp)) {
       hit_anything = true;
       closest      = hi_temp.t;
@@ -193,6 +236,7 @@ hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
   return hit_anything;
 }
 
+// @Hot
 [[nodiscard]] Vec3
 ray_color(Ray const &r, World const &w, s32 depth) {
   if (depth == 0) {
@@ -225,7 +269,7 @@ random_scene();
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 100; // 500
+s32 const SAMPLES_PER_PIXEL = 10; // 500
 // @todo: move to ui
 s32 const MAX_DEPTH = 10; // 50
 
@@ -234,13 +278,14 @@ f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
 // called by std::thread
 // no logging because concurrency stuff
 void
-rt_loop(s32     start_height,
-        s32     end_height,
-        s32     image_width,
-        s32     image_height,
-        u8     *buffer,
-        World  &w,
-        Camera &cam) {
+rt_loop(s32               start_height,
+        s32               end_height,
+        s32               image_width,
+        s32               image_height,
+        u8               *buffer,
+        World            &w,
+        Camera           &cam,
+        std::atomic_bool &thread_flag) {
   for (int j = end_height; j >= start_height; --j) {
     for (int i = 0; i < image_width; ++i) {
       Vec3 pixel_color = {0, 0, 0};
@@ -264,6 +309,8 @@ rt_loop(s32     start_height,
       buffer[NUM_CHANNELS * (j * image_width + i) + 3] = 255;
     }
   }
+
+  thread_flag = true;
 }
 
 [[nodiscard]] Rt_Output
@@ -298,6 +345,8 @@ do_raytraycing() {
        num_of_threads_supported,
        y_per_thread);
 
+  std::atomic_bool *thread_flags = new std::atomic_bool[num_of_threads_supported];
+
   for (s32 i = 0; i < num_of_threads_supported; i++) {
     std::thread([=] {
       rt_loop(i * y_per_thread,
@@ -306,14 +355,17 @@ do_raytraycing() {
               image_height,
               buffer,
               w,
-              cam);
+              cam,
+              thread_flags[i]);
     }).detach();
   }
 
   // No need to wait because everything will be updated in realtime.
 
-  return {.image_size = {(f32)image_width, (f32)image_height},
-          .rgba_data  = {.count = image_width * image_height * 4, .bytes = buffer}};
+  return {.image_size   = {(f32)image_width, (f32)image_height},
+          .rgba_data    = {.count = image_width * image_height * 4, .bytes = buffer},
+          .num_threads  = num_of_threads_supported,
+          .thread_flags = thread_flags};
 }
 
 [[nodiscard]] World
