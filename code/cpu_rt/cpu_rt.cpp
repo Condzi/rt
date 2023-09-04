@@ -235,24 +235,33 @@ random_scene();
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 10; // 500
+s32 const SAMPLES_PER_PIXEL = 500; // 500
 // @todo: move to ui
-s32 const MAX_DEPTH = 10; // 50
+s32 const MAX_DEPTH = 50; // 50
 
 f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
 
-// called by std::thread
-// no logging because concurrency stuff
+std::atomic_int current_row{0};
+
+s32
+get_next_row(s32 max_row) {
+  if (current_row + 1 >= max_row) return -1;
+  current_row += 1;
+  return current_row;
+}
+
 void
-rt_loop(s32               start_height,
-        s32               end_height,
-        s32               image_width,
-        s32               image_height,
-        u8               *buffer,
-        World            &w,
-        Camera           &cam,
-        std::atomic_bool &thread_flag) {
-  for (int j = end_height; j >= start_height; --j) {
+rt_loop_balanced(s32               max_row,
+                 s32               image_width,
+                 s32               image_height,
+                 u8               *buffer,
+                 World            &w,
+                 Camera           &cam,
+                 std::atomic_bool &thread_flag) {
+  while (true) {
+    s32 j = get_next_row(max_row);
+    if (j == -1) break;
+
     for (int i = 0; i < image_width; ++i) {
       Vec3 pixel_color = {0, 0, 0};
       for (s32 k = 0; k < SAMPLES_PER_PIXEL; k++) {
@@ -305,24 +314,12 @@ do_raytraycing() {
   u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
 
   s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
-  // @Fixme: If the modulo is not 0, we will have leftover scanlines
-  s32 const y_per_thread = image_height / num_of_threads_supported;
-  logf("%d therads -- %d scanlines per thread\n",
-       num_of_threads_supported,
-       y_per_thread);
-
   std::atomic_bool *thread_flags = new std::atomic_bool[num_of_threads_supported];
 
   for (s32 i = 0; i < num_of_threads_supported; i++) {
     std::thread([=] {
-      rt_loop(i * y_per_thread,
-              (i + 1) * y_per_thread - 1,
-              image_width,
-              image_height,
-              buffer,
-              w,
-              cam,
-              thread_flags[i]);
+      rt_loop_balanced(
+          image_height, image_width, image_height, buffer, w, cam, thread_flags[i]);
     }).detach();
   }
 
