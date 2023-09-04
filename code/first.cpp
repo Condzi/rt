@@ -1,3 +1,5 @@
+#include <immintrin.h> // For SSE intrinsics
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

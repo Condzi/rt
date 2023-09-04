@@ -127,11 +127,11 @@ struct Dielectric : Material {
 struct Sphere {
   Vec3      center;
   f32       radius; // @Note: can be negative: surface normals will point inward.
-  Material *material;
 };
 
 struct World {
   Sphere *spheres;
+  Material **material_spheres;
   s32     num_spheres;
 };
 
@@ -140,17 +140,19 @@ at(Ray const &r, f32 t) {
   return r.origin + r.direction * t;
 }
 
-// 12.5s
+// 12.4s for 10-10 params
 [[nodiscard]] bool
-hit_sphere_v2(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
+hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   Vec3 oc = r.origin - s.center;
 
   // Inline len_sq and dot
+  // Hot \/\/
   f32 a = r.direction.x * r.direction.x + r.direction.y * r.direction.y +
           r.direction.z * r.direction.z;
   f32 half_b = oc.x * r.direction.x + oc.y * r.direction.y + oc.z * r.direction.z;
   f32 c      = oc.x * oc.x + oc.y * oc.y + oc.z * oc.z - s.radius * s.radius;
   f32 discriminant = half_b * half_b - a * c;
+  // ^^ hot
 
   if (discriminant < 0) {
     return false;
@@ -175,44 +177,7 @@ hit_sphere_v2(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi)
 
   hi.front_face = (dot(r.direction, outward_normal) < 0);
   hi.normal     = outward_normal * (hi.front_face ? 1.f : -1.f);
-  hi.material   = s.material;
 
-  assert(hi.material);
-  return true;
-}
-
-// 14s
-[[nodiscard]] bool
-hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
-  Vec3      oc           = r.origin - s.center;
-  f32 const a = len_sq(r.direction); // dot(a, a), dot(a,b) = (a.x*b.x +...)
-  f32 const half_b       = dot(oc, r.direction);
-  f32 const c            = len_sq(oc) - s.radius * s.radius;
-  f32 const discriminant = half_b * half_b - a * c;
-
-  if (discriminant < 0) {
-    return false;
-  }
-
-  f32 const sd   = ::sqrtf(discriminant);
-  f32       root = (-half_b - sd) / a;
-
-  if (root < t_min || root > t_max) {
-    root = (-half_b + sd) / a;
-    if (root < t_min || root > t_max) {
-      return false;
-    }
-  }
-
-  hi.t = root;
-  hi.p = at(r, root);
-
-  Vec3 const outward_normal = (hi.p - s.center) * (1 / s.radius);
-  hi.front_face             = (dot(r.direction, outward_normal) < 0);
-  hi.normal                 = outward_normal * (hi.front_face ? 1.f : -1.f);
-  hi.material               = s.material;
-
-  assert(hi.material);
   return true;
 }
 
@@ -227,6 +192,7 @@ hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
     // @Hot
     if (hit_sphere(r, w.spheres[i], t_min, closest, hi_temp)) {
       hit_anything = true;
+      hi_temp.material = w.material_spheres[i];
       closest      = hi_temp.t;
       hi           = hi_temp;
       hit_idx      = i;
@@ -373,10 +339,12 @@ random_scene() {
   World w;
   w.num_spheres = 22 * 22 + 2;
   w.spheres     = (Sphere *)alloc_perm(w.num_spheres * sizeof(Sphere));
+  w.material_spheres = (Material **)alloc_perm(w.num_spheres * sizeof(Material *));
 
   Lambertian *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
   new (ground_material) Lambertian {Vec3 {0.5, 0.5, 0.5}};
-  w.spheres[0] = Sphere {Vec3 {0, -1000, 0}, 1000, ground_material};
+  w.spheres[0]          = Sphere {Vec3 {0, -1000, 0}, 1000};
+  w.material_spheres[0] = ground_material;
 
   s32 sphere_idx        = 1;
   s32 iteration_counter = 0;
@@ -396,22 +364,22 @@ random_scene() {
       }
 
       f32 const choose_mat = random_f32();
+      Material *mat;
       if (choose_mat < 0.8f) {
         Vec3 const  albedo = random_vec3() * random_vec3();
-        Lambertian *mat    = (Lambertian *)alloc_perm(sizeof(Lambertian));
+        mat                = (Lambertian *)alloc_perm(sizeof(Lambertian));
         new (mat) Lambertian {albedo};
-        w.spheres[sphere_idx] = Sphere {center, 0.2f, mat};
       } else if (choose_mat < 0.95f) {
         Vec3 const albedo = random_vec3_in_range(0.5f, 1);
         f32 const  fuzz   = random_f32_in_range(0, 0.5f);
-        Metal     *mat    = (Metal *)alloc_perm(sizeof(Metal));
+        mat               = (Metal *)alloc_perm(sizeof(Metal));
         new (mat) Metal {albedo, fuzz};
-        w.spheres[sphere_idx] = Sphere {center, 0.2f, mat};
       } else {
-        Dielectric *mat = (Dielectric *)alloc_perm(sizeof(Dielectric));
+        mat = (Dielectric *)alloc_perm(sizeof(Dielectric));
         new (mat) Dielectric {1.5f};
-        w.spheres[sphere_idx] = Sphere {center, 0.2f, mat};
       }
+      w.spheres[sphere_idx]          = Sphere {center, 0.2f};
+      w.material_spheres[sphere_idx] = mat;
 
       sphere_idx++;
     }
@@ -427,11 +395,14 @@ random_scene() {
   Metal *mat3 = (Metal *)alloc_perm(sizeof(Metal));
   new (mat3) Metal {Vec3 {0.7f, 0.6f, 0.5f}, 0.0f};
 
-  w.spheres[sphere_idx] = Sphere {Vec3 {0, 1, 0}, 1.0, mat1};
+  w.spheres[sphere_idx]          = Sphere {Vec3 {0, 1, 0}, 1.0};
+  w.material_spheres[sphere_idx] = mat1;
   sphere_idx++;
-  w.spheres[sphere_idx] = Sphere {Vec3 {-4, 1, 0}, 1.0, mat2};
+  w.spheres[sphere_idx]          = Sphere {Vec3 {-4, 1, 0}, 1.0};
+  w.material_spheres[sphere_idx] = mat2;
   sphere_idx++;
-  w.spheres[sphere_idx] = Sphere {Vec3 {4, 1, 0}, 1.0, mat3};
+  w.spheres[sphere_idx]          = Sphere {Vec3 {4, 1, 0}, 1.0};
+  w.material_spheres[sphere_idx] = mat3;
   sphere_idx++;
 
   logf("%d/%d spheres generated.\n", sphere_idx, w.num_spheres);
