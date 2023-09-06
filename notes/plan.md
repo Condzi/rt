@@ -10,17 +10,17 @@ Start with the Compute Shaders? What are the downsides of Coding Adventure &
 Raytraycing in One Weekeend? Can I combine them somehow to get something better?
 
 # July - Prototyping
-- [ ] Balls rendering
-- [ ] Triangles rendering
-- [ ] Lights @todo: be more specific (divide into categories)
-- [ ] Materials @todo: be more specific (what properties, exactly?)
-
 # August - Prototyping, porting to compute shaders?
+# September 
+- [X] Balls rendering
+- [X] Materials @todo: be more specific (what properties, exactly?)
+- [ ] Lights @todo: be more specific (divide into categories)
+
 @todo: be more specific
 - [ ] Compute shader pipeline setup
 - [ ] 3D models
+- [ ] BVH
 
-# September 
 
 # October
 Writing the thesis document.
