@@ -28,7 +28,22 @@ different modules (window module, input module and rendering module). If the sub
 don't handle the message, we fallback to the default window handler and that's it.
 This will prevent the window module from being too specific / tied to other modules.
 
+
+potential problems:
+- editor
+
 # To do / priority
+
+- CPU Raytraycer (based on "rt in one weekend")
+  - lights
+  - 3D models?
+
+- Wrapping up
+  - performance benchmark (low hanging fruits at least)
+  - code refactoring
+
+- Moving to compute shaders
+
 - UTF-8, use String everywhere & rewrite the tprint to accept it.
 
 - hw info (simd availability, threads) from Agner Fog

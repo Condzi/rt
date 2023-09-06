@@ -1,9 +1,15 @@
+#include <immintrin.h> // For SSE intrinsics
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cfloat>
 #include <cmath>
 #include <stdarg.h> // logf
+
+#include <atomic>
+#include <chrono>
+#include <thread>
 
 #include "first.hpp"
 
@@ -14,6 +20,8 @@
 #include "window/window.hpp"
 #include "gfx/gfx.hpp"
 #include "imgui/imgui.hpp"
+#include "parsers/parsers.hpp"
+#include "cpu_rt/cpu_rt.hpp"
 
 #include "base/base.cpp"
 #include "math/math.cpp"
@@ -21,6 +29,8 @@
 #include "window/window.cpp"
 #include "gfx/gfx.cpp"
 #include "imgui/imgui.cpp"
+#include "parsers/parsers.cpp"
+#include "cpu_rt/cpu_rt.cpp"
 
 using namespace rt;
 
@@ -76,6 +86,14 @@ main(void) {
 
   dbg_check_(false);
 
+  f32                                            rt_time = 0;
+  std::chrono::high_resolution_clock::time_point t0 =
+      std::chrono::high_resolution_clock::now();
+
+  Rt_Output rt_out = do_raytraycing();
+
+  // write_png_or_panic("hello_raytraycing.png", rt_out.rgba_data, rt_out.image_size);
+
   while (!window_is_closed()) {
     win32_message_loop();
 
@@ -85,7 +103,44 @@ main(void) {
 
     dear_imgui_update();
 
+    ImGui::Begin("CPU Raytracing");
+    // @Note: we do it over and over again because RT is raytracing all the time
+    //       In future just add an atomic that counts number of threads finished.
+    ImTextureID rt_out_as_texture = dear_imgui_create_texture_from_rt_output(rt_out);
+    ImGui::Image(rt_out_as_texture,
+                 ImVec2(rt_out.image_size.width, rt_out.image_size.height));
+    ImGui::End();
+
+    ImGui::Begin("Threads");
+    ImGui::Text("%d threads used", rt_out.num_threads);
+    s32 num_finished = 0;
+    for (s32 i = 0; i < rt_out.num_threads; i++) {
+      ImGui::Text("Thread %d: ", i + 1);
+      ImGui::SameLine();
+      if (rt_out.thread_flags[i]) {
+        ImGui::Text("Finished");
+        num_finished++;
+      } else {
+        ImGui::Text("Running");
+      }
+    }
+
+    if (num_finished == rt_out.num_threads) {
+      if (rt_time == 0) {
+        auto t1 = std::chrono::high_resolution_clock::now();
+        rt_time =
+            std::chrono::duration_cast<std::chrono::duration<f32>>(t1 - t0).count();
+      }
+      ImGui::Text("Finished in %g seconds.", rt_time);
+    }
+    ImGui::End();
+
     gfx_render();
+
+    clear_temp_mem();
+
+    auto res = (ID3D11ShaderResourceView*)rt_out_as_texture;
+    d3d_safe_release_(res);
   }
 
   logf("Goodbye :)\n");

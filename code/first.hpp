@@ -1,5 +1,6 @@
 #ifdef _WIN32
 #  ifndef _WIN64
+
 #    error 32-bit Windows is not supported.
 #  endif // _WIN64
 #else

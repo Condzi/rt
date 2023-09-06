@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-SET CommonCompilerFlags=-std:c++20 -diagnostics:column -WL -O1 -nologo -fp:fast -fp:except- -Gm- -GR- -EHa- -Zo -Oi -WX -W4 -wd4127 -wd4201 -wd4324 -FC -Z7 -GS-
+SET CommonCompilerFlags=-std:c++20 -diagnostics:column -WL -O2 -nologo -fp:fast -fp:except- -Gm- -GR- -EHa- -Zo -Oi -WX -W4 -wd4127 -wd4201 -wd4324 -FC -Z7 -GS-
 SET CommonCompilerFlags=-D_CRT_SECURE_NO_WARNINGS -DHANDMADE_INTERNAL=1 -DHANDMADE_SLOW=1 -DHANDMADE_WIN32=1 %CommonCompilerFlags%
 SET CommonLinkerFlags=-STACK:0x100000,0x100000 -incremental:no -opt:ref user32.lib gdi32.lib winmm.lib kernel32.lib
 

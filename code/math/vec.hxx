@@ -21,6 +21,10 @@ union Vec3 {
   };
 
   struct {
+    f32 r, g, b;
+  };
+
+  struct {
     Vec2 xy;
     f32  _unused0;
   };
@@ -102,6 +106,15 @@ dot(Vec2 a, Vec2 b);
 dot(Vec3 a, Vec3 b);
 [[nodiscard]] f32
 dot(Vec4 a, Vec4 b);
+
+[[nodiscard]] Vec3
+cross(Vec3 a, Vec3 b);
+
+[[nodiscard]] bool
+near_zero(Vec2 v);
+
+[[nodiscard]] bool
+near_zero(Vec3 v);
 
 /**
  * Operators
