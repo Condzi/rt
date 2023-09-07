@@ -5,13 +5,12 @@
  */
 
 namespace rt {
-struct Sphere;
 struct BVH_Node {
   BVH_Node *left, *right;
   // If node - aabb, if leaf (left=right=NULL) - sphere
   union {
     AABB    aabb;
-    Sphere *sphere = NULL;
+    Sphere  sphere;
   };
 };
 

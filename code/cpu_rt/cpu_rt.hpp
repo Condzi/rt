@@ -15,6 +15,15 @@ struct Ray {
   Vec3 direction_inv;
 };
 
+struct Material;
+struct Sphere {
+  Vec3 center;
+  f32  radius; // @Note: can be negative: surface normals will point inward.
+  AABB aabb;
+  // Move this somewhere else?
+  Material *material;
+};
+
 [[nodiscard]] Rt_Output
 do_raytraycing();
 } // namespace rt

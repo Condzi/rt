@@ -33,7 +33,7 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
     // Leaf case (one object) - both children are NULL and the payload is a sphere.
     root->left   = NULL;
     root->right  = NULL;
-    root->sphere = &spheres[begin];
+    root->sphere = spheres[begin];
     return root;
   }
 
@@ -45,11 +45,11 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
     root->left->left = root->left->right = NULL;
     root->right->left = root->right->right = NULL;
     if (comparator(spheres[begin], spheres[begin + 1])) {
-      root->left->sphere  = &spheres[begin];
-      root->right->sphere = &spheres[begin + 1];
+      root->left->sphere  = spheres[begin];
+      root->right->sphere = spheres[begin + 1];
     } else {
-      root->left->sphere  = &spheres[begin + 1];
-      root->right->sphere = &spheres[begin];
+      root->left->sphere  = spheres[begin + 1];
+      root->right->sphere = spheres[begin];
     }
   } else {
     std::sort(spheres + begin, spheres + end, comparator);
@@ -76,12 +76,12 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
 hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi) {
   // Edge case -- it's a leaf
   if (root->left == NULL && root->right == NULL) {
-    Sphere *sphere = root->sphere;
+    Sphere const &sphere = root->sphere;
 
-    bool const hit_aabb = ray_vs_aabb(ray.origin, ray.direction_inv, t, sphere->aabb);
+    bool const hit_aabb = ray_vs_aabb(ray.origin, ray.direction_inv, t, sphere.aabb);
     if (!hit_aabb) return false;
 
-    bool const hit_model = hit_sphere(ray, *sphere, t.min, t.max, hi);
+    bool const hit_model = hit_sphere(ray, sphere, t.min, t.max, hi);
     return hit_model;
   }
 

@@ -7,14 +7,6 @@ struct Hit_Info {
   bool      front_face;
 };
 
-struct Sphere {
-  Vec3 center;
-  f32  radius; // @Note: can be negative: surface normals will point inward.
-  AABB aabb;
-  // Move this somewhere else?
-  Material *material;
-};
-
 [[nodiscard]] Sphere
 make_sphere(Vec3 center, f32 r) {
   Vec3 const radius_vec {.x = r, .y = r, .z = r};
@@ -221,6 +213,9 @@ do_raytraycing() {
   static World w = random_scene();
   BVH_Node    *bvh_root = make_BVH(w.spheres, 0, w.num_spheres, w.aabb);
 
+  BVH_Node *bvh_arr     = NULL;
+  s32       num_indices = convert_BVH_tree_to_array(&bvh_arr, bvh_root);
+  (void)num_indices;
   // Render
 
   u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
