@@ -69,10 +69,15 @@ hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi) {
     return hit_model;
   }
 
+  if (!ray_vs_aabb(ray.origin, ray.direction, t, root->aabb)) {
+    return false;
+  }
+
   bool const hit_left  = hit_BVH(root->left, ray, t, hi);
   t.max                = (hit_left) ? (hi.t) : (t.max);
   bool const hit_right = hit_BVH(root->right, ray, t, hi);
 
   return hit_left || hit_right;
 }
+
 } // namespace rt
