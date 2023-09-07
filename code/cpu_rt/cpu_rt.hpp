@@ -20,3 +20,4 @@ do_raytraycing();
 
 #include "camera.hxx"
 #include "materials.hxx"
+#include "bvh.hxx"

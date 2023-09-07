@@ -7,6 +7,7 @@
 #include <cmath>
 #include <stdarg.h> // logf
 
+#include <algorithm> // std::sort in bvh
 #include <atomic>
 #include <chrono>
 #include <thread>

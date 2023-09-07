@@ -5,6 +5,9 @@ random_f32();
 [[nodiscard]] f32
 random_f32_in_range(f32 min, f32 max);
 
+[[nodiscard]] s32
+random_s32_in_range(s32 min, s32 max);
+
 [[nodiscard]] Vec3
 random_vec3();
 

@@ -310,3 +310,4 @@ random_scene() {
 
 #include "camera.cxx"
 #include "materials.cxx"
+#include "bvh.cxx"
