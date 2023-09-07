@@ -44,7 +44,9 @@ Lambertian::scatter(Ray const      &in,
     scatter_direction = hi.normal;
   }
 
-  out               = {.origin = hi.p, .direction = scatter_direction};
+  out               = {.origin        = hi.p,
+                       .direction     = scatter_direction,
+                       .direction_inv = Vec3 {1, 1, 1} / scatter_direction};
   attenuation_color = albedo;
 
   return true;
@@ -57,7 +59,9 @@ Metal::Metal(Vec3 albedo_, f32 fuzz_)
 Metal::scatter(Ray const &in, Hit_Info const &hi, Vec3 &attenuation_color, Ray &out) {
   Vec3 const reflected = reflect(normalized(in.direction), hi.normal);
   Vec3 const direction = reflected + random_in_unit_sphere() * fuzz;
-  out                  = {.origin = hi.p, .direction = direction};
+  out                  = {.origin        = hi.p,
+                          .direction     = direction,
+                          .direction_inv = Vec3 {1, 1, 1} / direction};
 
   attenuation_color = albedo;
   return (dot(out.direction, hi.normal) > 0);
@@ -88,7 +92,7 @@ Dielectric::scatter(Ray const      &in,
     direction = reflect(unit_direction, hi.normal);
   }
 
-  out               = {.origin = hi.p, .direction = direction};
+  out               = {.origin = hi.p, .direction = direction, .direction_inv = Vec3{1,1,1}/direction};
   attenuation_color = Vec3 {1.0f, 1.0f, 1.0f};
 
   return true;

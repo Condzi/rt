@@ -21,7 +21,7 @@ make_aabb_from_aabbs(AABB const &a, AABB const &b) {
 }
 
 [[nodiscard]] bool
-ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction, Vec2 ray_t, AABB const &aabb) {
+ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction_inv, Vec2 ray_t, AABB const &aabb) {
   // @Note: originally in the book this is in a loop, but to avoid adding mental
   //        complexity & improve performance, I unrolled it.
   // @Note: Optimized method by Andrew Kensler
@@ -29,7 +29,7 @@ ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction, Vec2 ray_t, AABB const &aabb) {
   /**
    * X axis
    */
-  f32 invD = 1 / ray_direction.x;
+  f32 invD = ray_direction_inv.x;
   f32 orig = ray_origin.x;
 
   f32 t0 = (aabb.x.min - orig) * invD;
@@ -45,7 +45,7 @@ ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction, Vec2 ray_t, AABB const &aabb) {
   /**
    * Y axis
    */
-  invD = 1 / ray_direction.y;
+  invD = ray_direction_inv.y;
   orig = ray_origin.y;
 
   t0 = (aabb.y.min - orig) * invD;
@@ -61,7 +61,7 @@ ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction, Vec2 ray_t, AABB const &aabb) {
   /**
    * Z axis
    */
-  invD = 1 / ray_direction.z;
+  invD = ray_direction_inv.z;
   orig = ray_origin.z;
 
   t0 = (aabb.z.min - orig) * invD;

@@ -16,6 +16,6 @@ make_aabb_from_extremas(Vec3 a, Vec3 b);
 make_aabb_from_aabbs(AABB const &a, AABB const &b);
 
 [[nodiscard]] bool
-ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction, Vec2 ray_t, AABB const &aabb);
+ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction_inv, Vec2 ray_t, AABB const &aabb);
 
 } // namespace rt

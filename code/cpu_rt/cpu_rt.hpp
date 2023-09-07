@@ -12,6 +12,7 @@ struct Rt_Output {
 struct Ray {
   Vec3 origin;
   Vec3 direction;
+  Vec3 direction_inv;
 };
 
 [[nodiscard]] Rt_Output

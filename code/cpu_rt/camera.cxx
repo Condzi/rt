@@ -43,6 +43,8 @@ get_ray_at(Camera const &cam, f32 s, f32 t) {
   Ray result = {.origin    = cam.origin + offset,
                 .direction = cam.lower_left_corner + cam.horizontal * s +
                              cam.vertical * t - cam.origin - offset};
+
+  result.direction_inv = Vec3 {.x=1, .y=1, .z=1} / result.direction;
   return result;
 }
 } // namespace rt

@@ -78,14 +78,14 @@ hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi) {
   if (root->left == NULL && root->right == NULL) {
     Sphere *sphere = root->sphere;
 
-    bool const hit_aabb = ray_vs_aabb(ray.origin, ray.direction, t, sphere->aabb);
+    bool const hit_aabb = ray_vs_aabb(ray.origin, ray.direction_inv, t, sphere->aabb);
     if (!hit_aabb) return false;
 
     bool const hit_model = hit_sphere(ray, *sphere, t.min, t.max, hi);
     return hit_model;
   }
 
-  if (!ray_vs_aabb(ray.origin, ray.direction, t, root->aabb)) {
+  if (!ray_vs_aabb(ray.origin, ray.direction_inv, t, root->aabb)) {
     return false;
   }
 

@@ -146,9 +146,9 @@ random_scene();
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 10; // 500
+s32 const SAMPLES_PER_PIXEL = 500; // 500
 // @todo: move to ui
-s32 const MAX_DEPTH = 10; // 50
+s32 const MAX_DEPTH = 50; // 50
 
 f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
 
