@@ -8,14 +8,26 @@ struct Hit_Info {
 };
 
 struct Sphere {
-  Vec3      center;
-  f32       radius; // @Note: can be negative: surface normals will point inward.
+  Vec3 center;
+  f32  radius; // @Note: can be negative: surface normals will point inward.
+  AABB aabb;
 };
 
+[[nodiscard]] Sphere
+make_sphere(Vec3 center, f32 r) {
+  Vec3 const radius_vec {.x = r, .y = r, .z = r};
+  Vec3 const aabb_min = center - radius_vec;
+  Vec3 const aabb_max = center + radius_vec;
+
+  return {.center = center,
+          .radius = r,
+          .aabb   = make_aabb_from_extremas(aabb_min, aabb_max)};
+}
+
 struct World {
-  Sphere *spheres;
+  Sphere    *spheres;
   Material **material_spheres;
-  s32     num_spheres;
+  s32        num_spheres;
 };
 
 [[nodiscard]] Vec3
@@ -223,7 +235,7 @@ random_scene() {
 
   Lambertian *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
   new (ground_material) Lambertian {Vec3 {0.5, 0.5, 0.5}};
-  w.spheres[0]          = Sphere {Vec3 {0, -1000, 0}, 1000};
+  w.spheres[0]          = make_sphere(Vec3 {0, -1000, 0}, 1000);
   w.material_spheres[0] = ground_material;
 
   s32 sphere_idx        = 1;
@@ -258,7 +270,7 @@ random_scene() {
         mat = (Dielectric *)alloc_perm(sizeof(Dielectric));
         new (mat) Dielectric {1.5f};
       }
-      w.spheres[sphere_idx]          = Sphere {center, 0.2f};
+      w.spheres[sphere_idx]          = make_sphere(center, 0.2f);
       w.material_spheres[sphere_idx] = mat;
 
       sphere_idx++;
@@ -275,13 +287,13 @@ random_scene() {
   Metal *mat3 = (Metal *)alloc_perm(sizeof(Metal));
   new (mat3) Metal {Vec3 {0.7f, 0.6f, 0.5f}, 0.0f};
 
-  w.spheres[sphere_idx]          = Sphere {Vec3 {0, 1, 0}, 1.0};
+  w.spheres[sphere_idx]          = make_sphere(Vec3 {0, 1, 0}, 1.0);
   w.material_spheres[sphere_idx] = mat1;
   sphere_idx++;
-  w.spheres[sphere_idx]          = Sphere {Vec3 {-4, 1, 0}, 1.0};
+  w.spheres[sphere_idx]          = make_sphere(Vec3 {-4, 1, 0}, 1.0);
   w.material_spheres[sphere_idx] = mat2;
   sphere_idx++;
-  w.spheres[sphere_idx]          = Sphere {Vec3 {4, 1, 0}, 1.0};
+  w.spheres[sphere_idx]          = make_sphere(Vec3 {4, 1, 0}, 1.0);
   w.material_spheres[sphere_idx] = mat3;
   sphere_idx++;
 
