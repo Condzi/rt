@@ -27,8 +27,20 @@ make_sphere(Vec3 center, f32 r) {
 struct World {
   Sphere    *spheres;
   Material **material_spheres;
+  s32        num_spheres_reserved;
   s32        num_spheres;
+  AABB       aabb;
 };
+
+void
+add_sphere(World &w, Sphere s, Material *mat) {
+  assert(w.num_spheres < w.num_spheres_reserved);
+
+  s32 const idx           = w.num_spheres++;
+  w.spheres[idx]          = s;
+  w.material_spheres[idx] = mat;
+  w.aabb                  = make_aabb_from_aabbs(w.aabb, s.aabb);
+}
 
 [[nodiscard]] Vec3
 at(Ray const &r, f32 t) {
@@ -229,23 +241,24 @@ do_raytraycing() {
 [[nodiscard]] World
 random_scene() {
   World w;
-  w.num_spheres = 22 * 22 + 2;
-  w.spheres     = (Sphere *)alloc_perm(w.num_spheres * sizeof(Sphere));
-  w.material_spheres = (Material **)alloc_perm(w.num_spheres * sizeof(Material *));
+  w.num_spheres          = 0;
+  w.aabb                 = AABB {};
+  w.num_spheres_reserved = 22 * 22 + 2;
+  w.spheres = (Sphere *)alloc_perm(w.num_spheres_reserved * sizeof(Sphere));
+  w.material_spheres =
+      (Material **)alloc_perm(w.num_spheres_reserved * sizeof(Material *));
 
   Lambertian *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
   new (ground_material) Lambertian {Vec3 {0.5, 0.5, 0.5}};
-  w.spheres[0]          = make_sphere(Vec3 {0, -1000, 0}, 1000);
-  w.material_spheres[0] = ground_material;
+  add_sphere(w, make_sphere(Vec3 {0, -1000, 0}, 1000), ground_material);
 
-  s32 sphere_idx        = 1;
   s32 iteration_counter = 0;
 
   for (s32 a = -11; a < 11; a++) {
     for (s32 b = -11; b < 11; b++) {
       iteration_counter++;
       // Space for 3 giant spheres, added outside the loop
-      if (w.num_spheres - sphere_idx == 3) {
+      if (w.num_spheres_reserved - w.num_spheres == 3) {
         continue;
       }
 
@@ -270,10 +283,8 @@ random_scene() {
         mat = (Dielectric *)alloc_perm(sizeof(Dielectric));
         new (mat) Dielectric {1.5f};
       }
-      w.spheres[sphere_idx]          = make_sphere(center, 0.2f);
-      w.material_spheres[sphere_idx] = mat;
 
-      sphere_idx++;
+      add_sphere(w, make_sphere(center, 0.2f), mat);
     }
   }
   logf("%d iterations \n", iteration_counter);
@@ -287,19 +298,11 @@ random_scene() {
   Metal *mat3 = (Metal *)alloc_perm(sizeof(Metal));
   new (mat3) Metal {Vec3 {0.7f, 0.6f, 0.5f}, 0.0f};
 
-  w.spheres[sphere_idx]          = make_sphere(Vec3 {0, 1, 0}, 1.0);
-  w.material_spheres[sphere_idx] = mat1;
-  sphere_idx++;
-  w.spheres[sphere_idx]          = make_sphere(Vec3 {-4, 1, 0}, 1.0);
-  w.material_spheres[sphere_idx] = mat2;
-  sphere_idx++;
-  w.spheres[sphere_idx]          = make_sphere(Vec3 {4, 1, 0}, 1.0);
-  w.material_spheres[sphere_idx] = mat3;
-  sphere_idx++;
+  add_sphere(w, make_sphere(Vec3 {0, 1, 0}, 1.0), mat1);
+  add_sphere(w, make_sphere(Vec3 {-4, 1, 0}, 1.0), mat2);
+  add_sphere(w, make_sphere(Vec3 {4, 1, 0}, 1.0), mat3);
 
-  logf("%d/%d spheres generated.\n", sphere_idx, w.num_spheres);
-  assert(sphere_idx <= w.num_spheres);
-  w.num_spheres = sphere_idx;
+  logf("%d/%d spheres generated.\n", w.num_spheres, w.num_spheres_reserved);
 
   return w;
 }

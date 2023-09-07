@@ -81,6 +81,8 @@ logf(const char *format, ...) {
 #define mem_comp_ ::memcmp
 #define mem_copy_ ::memcpy
 
+#define RT_RESTRICT __restrict
+
 namespace rt {
 template <typename T>
 void

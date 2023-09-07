@@ -13,6 +13,13 @@ make_aabb_from_extremas(Vec3 a, Vec3 b) {
   };
 }
 
+[[nodiscard]] AABB
+make_aabb_from_aabbs(AABB const &a, AABB const &b) {
+  return {.x = {.min = ::fmin(a.x.min, b.x.min), .max = ::fmax(a.x.max, b.x.max)},
+          .y = {.min = ::fmin(a.y.min, b.y.min), .max = ::fmax(a.y.max, b.y.max)},
+          .z = {.min = ::fmin(a.z.min, b.z.min), .max = ::fmax(a.z.max, b.z.max)}};
+}
+
 [[nodiscard]] bool
 ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction, Vec2 ray_t, AABB const &aabb) {
   // @Note: originally in the book this is in a loop, but to avoid adding mental
