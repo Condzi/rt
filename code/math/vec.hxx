@@ -12,6 +12,10 @@ union Vec2 {
     f32 width, height;
   };
 
+  struct {
+    f32 min, max; // Extents
+  };
+
   f32 v[2] = {};
 };
 

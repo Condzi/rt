@@ -7,6 +7,8 @@ struct Rt_Output {
   std::atomic_bool *thread_flags; // true if thread finished
 };
 
+// Ray can be thought of as a function:
+//  P(t) = A + t*B
 struct Ray {
   Vec3 origin;
   Vec3 direction;

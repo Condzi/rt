@@ -1,0 +1,73 @@
+namespace rt {
+[[nodiscard]] AABB
+make_aabb_from_intervals(Vec2 x, Vec2 y, Vec2 z) {
+  return {.x = x, .y = y, .z = z};
+}
+
+[[nodiscard]] AABB
+make_aabb_from_extremas(Vec3 a, Vec3 b) {
+  return {
+      .x = {.min = ::fmin(a.x, b.x), .max = ::fmax(a.x, b.x)},
+      .y = {.min = ::fmin(a.y, b.y), .max = ::fmax(a.y, b.y)},
+      .z = {.min = ::fmin(a.z, b.z), .max = ::fmax(a.z, b.z)},
+  };
+}
+
+[[nodiscard]] bool
+ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction, Vec2 ray_t, AABB const &aabb) {
+  // @Note: originally in the book this is in a loop, but to avoid adding mental
+  //        complexity & improve performance, I unrolled it.
+  // @Note: Optimized method by Andrew Kensler
+
+  /**
+   * X axis
+   */
+  f32 invD = 1 / ray_direction.x;
+  f32 orig = ray_origin.x;
+
+  f32 t0 = (aabb.x.min - orig) * invD;
+  f32 t1 = (aabb.x.max - orig) * invD;
+
+  if (invD < 0) rt_swap(t0, t1);
+
+  if (t0 > ray_t.min) ray_t.min = t0;
+  if (t1 < ray_t.max) ray_t.max = t1;
+
+  if (ray_t.max <= ray_t.min) return false;
+
+  /**
+   * Y axis
+   */
+  invD = 1 / ray_direction.y;
+  orig = ray_origin.y;
+
+  t0 = (aabb.y.min - orig) * invD;
+  t1 = (aabb.y.max - orig) * invD;
+
+  if (invD < 0) rt_swap(t0, t1);
+
+  if (t0 > ray_t.min) ray_t.min = t0;
+  if (t1 < ray_t.max) ray_t.max = t1;
+
+  if (ray_t.max <= ray_t.min) return false;
+
+  /**
+   * Z axis
+   */
+  invD = 1 / ray_direction.z;
+  orig = ray_origin.z;
+
+  t0 = (aabb.z.min - orig) * invD;
+  t1 = (aabb.z.max - orig) * invD;
+
+  if (invD < 0) rt_swap(t0, t1);
+
+  if (t0 > ray_t.min) ray_t.min = t0;
+  if (t1 < ray_t.max) ray_t.max = t1;
+
+  if (ray_t.max <= ray_t.min) return false;
+
+  // All axis overleap, we got a hit
+  return true;
+}
+} // namespace rt

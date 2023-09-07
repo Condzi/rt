@@ -3,6 +3,7 @@
  */
 
 #include "vec.hxx"
+#include "aabb.hxx"
 #include "mat.hxx"
 #include "random.hxx"
 
