@@ -146,7 +146,7 @@ random_scene();
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 50; // 500
+s32 const SAMPLES_PER_PIXEL = 10; // 500
 // @todo: move to ui
 s32 const MAX_DEPTH = 10; // 50
 
@@ -219,7 +219,7 @@ do_raytraycing() {
   // World
   // Static so it doesnt go out of stack
   static World w = random_scene();
-  BVH_Node    *bvh_root = make_BVH(w.spheres, 0, w.num_spheres);
+  BVH_Node    *bvh_root = make_BVH(w.spheres, 0, w.num_spheres, w.aabb);
 
   // Render
 

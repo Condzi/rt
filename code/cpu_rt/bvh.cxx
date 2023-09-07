@@ -1,7 +1,16 @@
 namespace rt {
 [[nodiscard]] BVH_Node *
-make_BVH(Sphere *spheres, s32 begin, s32 end) {
-  int  axis       = random_s32_in_range(0, 2);
+make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
+  int axis = [parent_aabb] {
+    f32 const x = len_sq(parent_aabb.x);
+    f32 const y = len_sq(parent_aabb.y);
+    f32 const z = len_sq(parent_aabb.z);
+
+    if (x > y && x > z) return 0;
+    if (y > x && y > z) return 1;
+    return 2;
+  }();
+
   auto comparator = [axis](Sphere const &a, Sphere const &b) {
     switch (axis) {
       case 0:
@@ -16,9 +25,10 @@ make_BVH(Sphere *spheres, s32 begin, s32 end) {
     return false;
   };
 
-  s32       object_span = end - begin;
-  BVH_Node *root        = (BVH_Node *)alloc_perm(sizeof(BVH_Node));
+  BVH_Node *root = (BVH_Node *)alloc_perm(sizeof(BVH_Node));
+  root->aabb     = parent_aabb;
 
+  s32 object_span = end - begin;
   if (object_span == 1) {
     // Leaf case (one object) - both children are NULL and the payload is a sphere.
     root->left   = NULL;
@@ -41,16 +51,22 @@ make_BVH(Sphere *spheres, s32 begin, s32 end) {
       root->left->sphere  = &spheres[begin + 1];
       root->right->sphere = &spheres[begin];
     }
-    root->aabb =
-        make_aabb_from_aabbs(root->left->sphere->aabb, root->right->sphere->aabb);
   } else {
     std::sort(spheres + begin, spheres + end, comparator);
 
     auto mid    = begin + object_span / 2;
-    root->left  = make_BVH(spheres, begin, mid);
-    root->right = make_BVH(spheres, mid, end);
+    // Precalculate AABBs
+    AABB left_aabb, right_aabb;
+    for (s32 i = begin; i < mid; i++) {
+      left_aabb = make_aabb_from_aabbs(left_aabb, spheres[i].aabb);
+    }
 
-    root->aabb = make_aabb_from_aabbs(root->left->aabb, root->right->aabb);
+    for (s32 i = mid; i < end; i++) {
+      right_aabb = make_aabb_from_aabbs(right_aabb, spheres[i].aabb);
+    }
+
+    root->left  = make_BVH(spheres, begin, mid, left_aabb);
+    root->right = make_BVH(spheres, mid, end, right_aabb);
   }
 
   return root;
