@@ -11,6 +11,8 @@ struct Sphere {
   Vec3 center;
   f32  radius; // @Note: can be negative: surface normals will point inward.
   AABB aabb;
+  // Move this somewhere else?
+  Material *material;
 };
 
 [[nodiscard]] Sphere
@@ -19,14 +21,14 @@ make_sphere(Vec3 center, f32 r) {
   Vec3 const aabb_min = center - radius_vec;
   Vec3 const aabb_max = center + radius_vec;
 
-  return {.center = center,
-          .radius = r,
-          .aabb   = make_aabb_from_extremas(aabb_min, aabb_max)};
+  return {.center   = center,
+          .radius   = r,
+          .aabb     = make_aabb_from_extremas(aabb_min, aabb_max),
+          .material = NULL};
 }
 
 struct World {
   Sphere    *spheres;
-  Material **material_spheres;
   s32        num_spheres_reserved;
   s32        num_spheres;
   AABB       aabb;
@@ -38,7 +40,7 @@ add_sphere(World &w, Sphere s, Material *mat) {
 
   s32 const idx           = w.num_spheres++;
   w.spheres[idx]          = s;
-  w.material_spheres[idx] = mat;
+  w.spheres[idx].material = mat;
   w.aabb                  = make_aabb_from_aabbs(w.aabb, s.aabb);
 }
 
@@ -84,6 +86,7 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
 
   hi.front_face = (dot(r.direction, outward_normal) < 0);
   hi.normal     = outward_normal * (hi.front_face ? 1.f : -1.f);
+  hi.material   = s.material;
 
   return true;
 }
@@ -99,7 +102,6 @@ hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
     // @Hot
     if (hit_sphere(r, w.spheres[i], t_min, closest, hi_temp)) {
       hit_anything = true;
-      hi_temp.material = w.material_spheres[i];
       closest      = hi_temp.t;
       hi           = hi_temp;
       hit_idx      = i;
@@ -111,19 +113,21 @@ hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
 
 // @Hot
 [[nodiscard]] Vec3
-ray_color(Ray const &r, World const &w, s32 depth) {
+// ray_color(Ray const &r, World const &w, s32 depth) {
+ray_color(Ray const &r, BVH_Node *const root, s32 depth) {
   if (depth == 0) {
     return Vec3 {0, 0, 0};
   }
 
   Hit_Info hi;
   // @Note: 0.001 instead 0 fixes shadow acne
-  if (hit_world(r, w, 0.001f, FLT_MAX, hi)) {
+  // if (hit_world(r, w, 0.001f, FLT_MAX, hi)) {
+  if (hit_BVH(root, r, {.min = 0.001f, .max = FLT_MAX}, hi)) {
     Ray  scattered;
     Vec3 attenuated_color;
 
     if (hi.material->scatter(r, hi, attenuated_color, scattered)) {
-      return attenuated_color * ray_color(scattered, w, depth - 1);
+      return attenuated_color * ray_color(scattered, root, depth - 1);
     } else {
       return Vec3 {0, 0, 0};
     }
@@ -162,7 +166,7 @@ rt_loop_balanced(s32               max_row,
                  s32               image_width,
                  s32               image_height,
                  u8               *buffer,
-                 World            &w,
+                 BVH_Node         *bvh_root,
                  Camera           &cam,
                  std::atomic_bool &thread_flag) {
   while (true) {
@@ -176,7 +180,7 @@ rt_loop_balanced(s32               max_row,
         auto v = (f32(j) + random_f32()) / (image_height - 1);
 
         Ray r       = get_ray_at(cam, u, v);
-        pixel_color = pixel_color + ray_color(r, w, MAX_DEPTH);
+        pixel_color = pixel_color + ray_color(r, bvh_root, MAX_DEPTH);
       }
 
       pixel_color = pixel_color * COLOR_SCALE;
@@ -215,6 +219,7 @@ do_raytraycing() {
   // World
   // Static so it doesnt go out of stack
   static World w = random_scene();
+  BVH_Node    *bvh_root = make_BVH(w.spheres, 0, w.num_spheres);
 
   // Render
 
@@ -225,8 +230,13 @@ do_raytraycing() {
 
   for (s32 i = 0; i < num_of_threads_supported; i++) {
     std::thread([=] {
-      rt_loop_balanced(
-          image_height, image_width, image_height, buffer, w, cam, thread_flags[i]);
+      rt_loop_balanced(image_height,
+                       image_width,
+                       image_height,
+                       buffer,
+                       bvh_root,
+                       cam,
+                       thread_flags[i]);
     }).detach();
   }
 
@@ -245,8 +255,6 @@ random_scene() {
   w.aabb                 = AABB {};
   w.num_spheres_reserved = 22 * 22 + 2;
   w.spheres = (Sphere *)alloc_perm(w.num_spheres_reserved * sizeof(Sphere));
-  w.material_spheres =
-      (Material **)alloc_perm(w.num_spheres_reserved * sizeof(Material *));
 
   Lambertian *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
   new (ground_material) Lambertian {Vec3 {0.5, 0.5, 0.5}};

@@ -16,7 +16,7 @@ struct BVH_Node {
 };
 
 [[nodiscard]] BVH_Node *
-make_BVH(Sphere *spheres, s32 num_spheres, s32 begin, s32 end);
+make_BVH(Sphere *spheres, s32 begin, s32 end);
 
 [[nodiscard]] bool
 hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi);
