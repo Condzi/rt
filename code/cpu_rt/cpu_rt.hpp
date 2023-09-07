@@ -17,3 +17,4 @@ do_raytraycing();
 } // namespace rt
 
 #include "camera.hxx"
+#include "materials.hxx"
