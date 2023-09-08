@@ -213,14 +213,12 @@ do_raytraycing() {
   static World w = random_scene();
   BVH_Node    *bvh_root = make_BVH(w.spheres, 0, w.num_spheres, w.aabb);
 
-  BVH_Node *bvh_arr     = NULL;
-  s32       num_indices = convert_BVH_tree_to_array(&bvh_arr, bvh_root);
-  (void)num_indices;
   // Render
 
   u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
 
   s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
+
   std::atomic_bool *thread_flags = new std::atomic_bool[num_of_threads_supported];
 
   for (s32 i = 0; i < num_of_threads_supported; i++) {
@@ -238,7 +236,8 @@ do_raytraycing() {
   // No need to wait because everything will be updated in realtime.
 
   return {.image_size   = {(f32)image_width, (f32)image_height},
-          .rgba_data    = {.count = image_width * image_height * 4, .bytes = buffer},
+          .rgba_data    = {.count = image_width * image_height * NUM_CHANNELS,
+                           .bytes = buffer},
           .num_threads  = num_of_threads_supported,
           .thread_flags = thread_flags};
 }
