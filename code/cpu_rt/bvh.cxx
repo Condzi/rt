@@ -1,4 +1,6 @@
 namespace rt {
+static std::unordered_map<BVH_Node *, Sphere> node_to_sphere;
+
 [[nodiscard]] BVH_Node *
 make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   int axis = [parent_aabb] {
@@ -33,7 +35,9 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
     // Leaf case (one object) - both children are NULL and the payload is a sphere.
     root->left   = NULL;
     root->right  = NULL;
-    root->sphere = spheres[begin];
+    root->aabb           = spheres[begin].aabb;
+    node_to_sphere[root] = spheres[begin];
+
     return root;
   }
 
@@ -45,12 +49,19 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
     root->left->left = root->left->right = NULL;
     root->right->left = root->right->right = NULL;
     if (comparator(spheres[begin], spheres[begin + 1])) {
-      root->left->sphere  = spheres[begin];
-      root->right->sphere = spheres[begin + 1];
+      root->left->aabb            = spheres[begin].aabb;
+      root->right->aabb           = spheres[begin + 1].aabb;
+      node_to_sphere[root->left]  = spheres[begin];
+      node_to_sphere[root->right] = spheres[begin + 1];
+
     } else {
-      root->left->sphere  = spheres[begin + 1];
-      root->right->sphere = spheres[begin];
+      root->left->aabb  = spheres[begin + 1].aabb;
+      root->right->aabb = spheres[begin].aabb;
+
+      node_to_sphere[root->left]  = spheres[begin + 1];
+      node_to_sphere[root->right] = spheres[begin];
     }
+
   } else {
     std::sort(spheres + begin, spheres + end, comparator);
 
@@ -72,28 +83,41 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   return root;
 }
 
+thread_local std::vector<BVH_Node *> candidates;
+void
+hit_BVH_internal(BVH_Node *root, Vec3 const &ray_origin, Vec3 const &ray_inv_dir) {
+  if (!ray_vs_aabb(
+          ray_origin, ray_inv_dir, {.min = 0.001f, .max = FLT_MAX}, root->aabb)) {
+    return;
+  }
+
+  // Potential hit
+  if (root->left == NULL && root->right == NULL) {
+    candidates.push_back(root);
+    return;
+  }
+
+  hit_BVH_internal(root->left, ray_origin, ray_inv_dir);
+  hit_BVH_internal(root->right, ray_origin, ray_inv_dir);
+}
+
 [[nodiscard]] bool
 hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi) {
-  // Edge case -- it's a leaf
-  if (root->left == NULL && root->right == NULL) {
-    Sphere const &sphere = root->sphere;
+  candidates.reserve(128);
+  candidates.clear();
 
-    bool const hit_aabb = ray_vs_aabb(ray.origin, ray.direction_inv, t, sphere.aabb);
-    if (!hit_aabb) return false;
+  hit_BVH_internal(root, ray.origin, ray.direction_inv);
 
-    bool const hit_model = hit_sphere(ray, sphere, t.min, t.max, hi);
-    return hit_model;
+  bool any_hit = false;
+  for (BVH_Node *node : candidates) {
+    Sphere const &sphere = node_to_sphere[node];
+    if (hit_sphere(ray, sphere, t.min, t.max, hi)) {
+      any_hit = true;
+      t.max   = hi.t;
+    }
   }
 
-  if (!ray_vs_aabb(ray.origin, ray.direction_inv, t, root->aabb)) {
-    return false;
-  }
-
-  bool const hit_left  = hit_BVH(root->left, ray, t, hi);
-  t.max                = (hit_left) ? (hi.t) : (t.max);
-  bool const hit_right = hit_BVH(root->right, ray, t, hi);
-
-  return hit_left || hit_right;
+  return any_hit;
 }
 
 } // namespace rt
