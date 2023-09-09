@@ -10,6 +10,11 @@ random_f32_in_range(f32 min, f32 max) {
   return min + (max - min) * random_f32();
 }
 
+[[nodiscard]] s32
+random_s32_in_range(s32 min, s32 max) {
+  return (int)random_f32_in_range((f32)min, (f32)max);
+}
+
 [[nodiscard]] Vec3
 random_vec3() {
   Vec3 const result = {.x = random_f32(), .y = random_f32(), .z = random_f32()};

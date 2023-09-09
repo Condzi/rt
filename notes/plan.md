@@ -13,13 +13,16 @@ Raytraycing in One Weekeend? Can I combine them somehow to get something better?
 # August - Prototyping, porting to compute shaders?
 # September 
 - [X] Balls rendering
-- [X] Materials @todo: be more specific (what properties, exactly?)
-- [ ] Lights @todo: be more specific (divide into categories)
+- [X] Materials
+- [X] BVH
+- [ ] Architecture refactor 
+- [ ] Textures
+- [ ] Quads
+- [ ] Lights
 
 @todo: be more specific
 - [ ] Compute shader pipeline setup
 - [ ] 3D models
-- [ ] BVH
 
 
 # October

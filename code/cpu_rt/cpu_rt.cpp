@@ -1,8 +1,4 @@
-#include "camera.cxx"
-
 namespace rt {
-struct Material;
-
 struct Hit_Info {
   Material *material;
   Vec3      p;
@@ -11,129 +7,34 @@ struct Hit_Info {
   bool      front_face;
 };
 
-struct Material {
-  // Returns true when the ray was absorbed.
-  // Calculates the new color and ray.
-  virtual bool
-  scatter(Ray const &in, Hit_Info const &hi, Vec3 &attenuation_color, Ray &out) = 0;
-};
+[[nodiscard]] Sphere
+make_sphere(Vec3 center, f32 r) {
+  Vec3 const radius_vec {.x = r, .y = r, .z = r};
+  Vec3 const aabb_min = center - radius_vec;
+  Vec3 const aabb_max = center + radius_vec;
 
-struct Lambertian : Material {
-  Vec3 albedo;
-
-  Lambertian(Vec3 albedo_) : albedo(albedo_) {}
-
-  [[nodiscard]] bool
-  scatter(Ray const      &in,
-          Hit_Info const &hi,
-          Vec3           &attenuation_color,
-          Ray            &out) override {
-    (void)in;
-#if 0 // Alternative formulas
-    Vec3 scatter_direction = hi.normal + random_in_unit_sphere();
-    Vec3 scatter_direction = random_in_hemisphere(hi.normal);
-#endif
-    Vec3 scatter_direction = hi.normal + random_unit_vector();
-    if (near_zero(scatter_direction)) {
-      scatter_direction = hi.normal;
-    }
-
-    out               = {.origin = hi.p, .direction = scatter_direction};
-    attenuation_color = albedo;
-
-    return true;
-  }
-};
-
-[[nodiscard]] Vec3
-reflect(Vec3 v, Vec3 n) {
-  return v - n * 2 * dot(v, n);
+  return {.center   = center,
+          .radius   = r,
+          .aabb     = make_aabb_from_extremas(aabb_min, aabb_max),
+          .material = NULL};
 }
-
-struct Metal : Material {
-  Vec3 albedo;
-  f32  fuzz;
-
-  Metal(Vec3 albedo_, f32 fuzz_) : albedo(albedo_), fuzz(fuzz_ < 1 ? fuzz_ : 1) {}
-
-  [[nodiscard]] bool
-  scatter(Ray const      &in,
-          Hit_Info const &hi,
-          Vec3           &attenuation_color,
-          Ray            &out) override {
-    Vec3 const reflected = reflect(normalized(in.direction), hi.normal);
-    Vec3 const direction = reflected + random_in_unit_sphere() * fuzz;
-    out                  = {.origin = hi.p, .direction = direction};
-
-    attenuation_color = albedo;
-    return (dot(out.direction, hi.normal) > 0);
-  }
-};
-
-// from Snell's law
-[[nodiscard]] Vec3
-refract(Vec3 uv, Vec3 n, f32 etai_over_etat) {
-  f32 const  cos_theta      = fmin(dot(uv * -1.f, n), 1.0);
-  Vec3 const r_out_perp     = (uv + n * cos_theta) * etai_over_etat;
-  Vec3 const r_out_parallel = n * (-::sqrtf(::fabsf(1.0f - len_sq(r_out_perp))));
-
-  return r_out_perp + r_out_parallel;
-}
-
-// Schlick's approximation of reflactance
-[[nodiscard]] f32
-reflactance(f32 cosine, f32 refraction_index) {
-  f32 r0 = (1 - refraction_index) / (1 + refraction_index);
-  r0     = r0 * r0;
-
-  return r0 + (1 - r0) * ::powf((1 - cosine), 5);
-}
-
-struct Dielectric : Material {
-  f32 refraction_index;
-
-  Dielectric(f32 refraction_index_) : refraction_index(refraction_index_) {}
-
-  [[nodiscard]] bool
-  scatter(Ray const      &in,
-          Hit_Info const &hi,
-          Vec3           &attenuation_color,
-          Ray            &out) override {
-    f32 const refraction_ratio =
-        hi.front_face ? (1.0f / refraction_index) : (refraction_index);
-
-    Vec3 const unit_direction = normalized(in.direction);
-    f32 const  cos_theta      = fmin(dot(unit_direction * -1.f, hi.normal), 1.0);
-    f32 const  sin_theta      = ::sqrt(1.0f - cos_theta * cos_theta);
-
-    bool const can_refract = (refraction_ratio * sin_theta) <= 1.0f;
-    bool const reflactance_test =
-        reflactance(cos_theta, refraction_ratio) > random_f32();
-
-    Vec3 direction;
-    if (can_refract && !reflactance_test) {
-      direction = refract(unit_direction, hi.normal, refraction_ratio);
-    } else {
-      direction = reflect(unit_direction, hi.normal);
-    }
-
-    out               = {.origin = hi.p, .direction = direction};
-    attenuation_color = Vec3 {1.0f, 1.0f, 1.0f};
-
-    return true;
-  }
-};
-
-struct Sphere {
-  Vec3      center;
-  f32       radius; // @Note: can be negative: surface normals will point inward.
-};
 
 struct World {
-  Sphere *spheres;
-  Material **material_spheres;
-  s32     num_spheres;
+  Sphere    *spheres;
+  s32        num_spheres_reserved;
+  s32        num_spheres;
+  AABB       aabb;
 };
+
+void
+add_sphere(World &w, Sphere s, Material *mat) {
+  assert(w.num_spheres < w.num_spheres_reserved);
+
+  s32 const idx           = w.num_spheres++;
+  w.spheres[idx]          = s;
+  w.spheres[idx].material = mat;
+  w.aabb                  = make_aabb_from_aabbs(w.aabb, s.aabb);
+}
 
 [[nodiscard]] Vec3
 at(Ray const &r, f32 t) {
@@ -177,6 +78,7 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
 
   hi.front_face = (dot(r.direction, outward_normal) < 0);
   hi.normal     = outward_normal * (hi.front_face ? 1.f : -1.f);
+  hi.material   = s.material;
 
   return true;
 }
@@ -192,7 +94,6 @@ hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
     // @Hot
     if (hit_sphere(r, w.spheres[i], t_min, closest, hi_temp)) {
       hit_anything = true;
-      hi_temp.material = w.material_spheres[i];
       closest      = hi_temp.t;
       hi           = hi_temp;
       hit_idx      = i;
@@ -204,19 +105,21 @@ hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
 
 // @Hot
 [[nodiscard]] Vec3
-ray_color(Ray const &r, World const &w, s32 depth) {
+// ray_color(Ray const &r, World const &w, s32 depth) {
+ray_color(Ray const &r, BVH_Node *const root, s32 depth) {
   if (depth == 0) {
     return Vec3 {0, 0, 0};
   }
 
   Hit_Info hi;
   // @Note: 0.001 instead 0 fixes shadow acne
-  if (hit_world(r, w, 0.001f, FLT_MAX, hi)) {
+  // if (hit_world(r, w, 0.001f, FLT_MAX, hi)) {
+  if (hit_BVH(root, r, {.min = 0.001f, .max = FLT_MAX}, hi)) {
     Ray  scattered;
     Vec3 attenuated_color;
 
     if (hi.material->scatter(r, hi, attenuated_color, scattered)) {
-      return attenuated_color * ray_color(scattered, w, depth - 1);
+      return attenuated_color * ray_color(scattered, root, depth - 1);
     } else {
       return Vec3 {0, 0, 0};
     }
@@ -255,7 +158,7 @@ rt_loop_balanced(s32               max_row,
                  s32               image_width,
                  s32               image_height,
                  u8               *buffer,
-                 World            &w,
+                 BVH_Node         *bvh_root,
                  Camera           &cam,
                  std::atomic_bool &thread_flag) {
   while (true) {
@@ -269,7 +172,7 @@ rt_loop_balanced(s32               max_row,
         auto v = (f32(j) + random_f32()) / (image_height - 1);
 
         Ray r       = get_ray_at(cam, u, v);
-        pixel_color = pixel_color + ray_color(r, w, MAX_DEPTH);
+        pixel_color = pixel_color + ray_color(r, bvh_root, MAX_DEPTH);
       }
 
       pixel_color = pixel_color * COLOR_SCALE;
@@ -308,25 +211,33 @@ do_raytraycing() {
   // World
   // Static so it doesnt go out of stack
   static World w = random_scene();
+  BVH_Node    *bvh_root = make_BVH(w.spheres, 0, w.num_spheres, w.aabb);
 
   // Render
 
   u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
 
   s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
+
   std::atomic_bool *thread_flags = new std::atomic_bool[num_of_threads_supported];
 
   for (s32 i = 0; i < num_of_threads_supported; i++) {
     std::thread([=] {
-      rt_loop_balanced(
-          image_height, image_width, image_height, buffer, w, cam, thread_flags[i]);
+      rt_loop_balanced(image_height,
+                       image_width,
+                       image_height,
+                       buffer,
+                       bvh_root,
+                       cam,
+                       thread_flags[i]);
     }).detach();
   }
 
   // No need to wait because everything will be updated in realtime.
 
   return {.image_size   = {(f32)image_width, (f32)image_height},
-          .rgba_data    = {.count = image_width * image_height * 4, .bytes = buffer},
+          .rgba_data    = {.count = image_width * image_height * NUM_CHANNELS,
+                           .bytes = buffer},
           .num_threads  = num_of_threads_supported,
           .thread_flags = thread_flags};
 }
@@ -334,23 +245,22 @@ do_raytraycing() {
 [[nodiscard]] World
 random_scene() {
   World w;
-  w.num_spheres = 22 * 22 + 2;
-  w.spheres     = (Sphere *)alloc_perm(w.num_spheres * sizeof(Sphere));
-  w.material_spheres = (Material **)alloc_perm(w.num_spheres * sizeof(Material *));
+  w.num_spheres          = 0;
+  w.aabb                 = AABB {};
+  w.num_spheres_reserved = 22 * 22 + 2;
+  w.spheres = (Sphere *)alloc_perm(w.num_spheres_reserved * sizeof(Sphere));
 
   Lambertian *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
   new (ground_material) Lambertian {Vec3 {0.5, 0.5, 0.5}};
-  w.spheres[0]          = Sphere {Vec3 {0, -1000, 0}, 1000};
-  w.material_spheres[0] = ground_material;
+  add_sphere(w, make_sphere(Vec3 {0, -1000, 0}, 1000), ground_material);
 
-  s32 sphere_idx        = 1;
   s32 iteration_counter = 0;
 
   for (s32 a = -11; a < 11; a++) {
     for (s32 b = -11; b < 11; b++) {
       iteration_counter++;
       // Space for 3 giant spheres, added outside the loop
-      if (w.num_spheres - sphere_idx == 3) {
+      if (w.num_spheres_reserved - w.num_spheres == 3) {
         continue;
       }
 
@@ -375,10 +285,8 @@ random_scene() {
         mat = (Dielectric *)alloc_perm(sizeof(Dielectric));
         new (mat) Dielectric {1.5f};
       }
-      w.spheres[sphere_idx]          = Sphere {center, 0.2f};
-      w.material_spheres[sphere_idx] = mat;
 
-      sphere_idx++;
+      add_sphere(w, make_sphere(center, 0.2f), mat);
     }
   }
   logf("%d iterations \n", iteration_counter);
@@ -392,20 +300,16 @@ random_scene() {
   Metal *mat3 = (Metal *)alloc_perm(sizeof(Metal));
   new (mat3) Metal {Vec3 {0.7f, 0.6f, 0.5f}, 0.0f};
 
-  w.spheres[sphere_idx]          = Sphere {Vec3 {0, 1, 0}, 1.0};
-  w.material_spheres[sphere_idx] = mat1;
-  sphere_idx++;
-  w.spheres[sphere_idx]          = Sphere {Vec3 {-4, 1, 0}, 1.0};
-  w.material_spheres[sphere_idx] = mat2;
-  sphere_idx++;
-  w.spheres[sphere_idx]          = Sphere {Vec3 {4, 1, 0}, 1.0};
-  w.material_spheres[sphere_idx] = mat3;
-  sphere_idx++;
+  add_sphere(w, make_sphere(Vec3 {0, 1, 0}, 1.0), mat1);
+  add_sphere(w, make_sphere(Vec3 {-4, 1, 0}, 1.0), mat2);
+  add_sphere(w, make_sphere(Vec3 {4, 1, 0}, 1.0), mat3);
 
-  logf("%d/%d spheres generated.\n", sphere_idx, w.num_spheres);
-  assert(sphere_idx <= w.num_spheres);
-  w.num_spheres = sphere_idx;
+  logf("%d/%d spheres generated.\n", w.num_spheres, w.num_spheres_reserved);
 
   return w;
 }
 } // namespace rt
+
+#include "camera.cxx"
+#include "materials.cxx"
+#include "bvh.cxx"

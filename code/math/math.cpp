@@ -1,4 +1,5 @@
 #include "vec.cxx"
+#include "aabb.cxx"
 #include "mat.cxx"
 #include "random.cxx"
 
