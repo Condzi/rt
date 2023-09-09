@@ -21,60 +21,25 @@ make_aabb_from_aabbs(AABB const &a, AABB const &b) {
 }
 
 [[nodiscard]] bool
-ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction_inv, Vec2 ray_t, AABB const &aabb) {
-  // @Note: originally in the book this is in a loop, but to avoid adding mental
-  //        complexity & improve performance, I unrolled it.
+ray_vs_aabb(Vec3 const &RT_RESTRICT ray_origin,
+            Vec3 const &RT_RESTRICT ray_direction_inv,
+            Vec2                    ray_t,
+            AABB const &RT_RESTRICT aabb) {
   // @Note: Optimized method by Andrew Kensler
+  for (int a = 0; a < 3; a++) {
+    f32 const invD = ray_direction_inv.v[a];
+    f32 const orig = ray_origin.v[a];
 
-  /**
-   * X axis
-   */
-  f32 invD = ray_direction_inv.x;
-  f32 orig = ray_origin.x;
+    f32 t0 = (aabb.v[a].min - orig) * invD;
+    f32 t1 = (aabb.v[a].max - orig) * invD;
 
-  f32 t0 = (aabb.x.min - orig) * invD;
-  f32 t1 = (aabb.x.max - orig) * invD;
+    if (invD < 0) std::swap(t0, t1);
 
-  if (invD < 0) rt_swap(t0, t1);
+    if (t0 > ray_t.min) ray_t.min = t0;
+    if (t1 < ray_t.max) ray_t.max = t1;
 
-  if (t0 > ray_t.min) ray_t.min = t0;
-  if (t1 < ray_t.max) ray_t.max = t1;
-
-  if (ray_t.max <= ray_t.min) return false;
-
-  /**
-   * Y axis
-   */
-  invD = ray_direction_inv.y;
-  orig = ray_origin.y;
-
-  t0 = (aabb.y.min - orig) * invD;
-  t1 = (aabb.y.max - orig) * invD;
-
-  if (invD < 0) rt_swap(t0, t1);
-
-  if (t0 > ray_t.min) ray_t.min = t0;
-  if (t1 < ray_t.max) ray_t.max = t1;
-
-  if (ray_t.max <= ray_t.min) return false;
-
-  /**
-   * Z axis
-   */
-  invD = ray_direction_inv.z;
-  orig = ray_origin.z;
-
-  t0 = (aabb.z.min - orig) * invD;
-  t1 = (aabb.z.max - orig) * invD;
-
-  if (invD < 0) rt_swap(t0, t1);
-
-  if (t0 > ray_t.min) ray_t.min = t0;
-  if (t1 < ray_t.max) ray_t.max = t1;
-
-  if (ray_t.max <= ray_t.min) return false;
-
-  // All axis overleap, we got a hit
+    if (ray_t.max <= ray_t.min) return false;
+  }
   return true;
 }
 } // namespace rt
