@@ -14,7 +14,9 @@ Raytraycing in One Weekeend? Can I combine them somehow to get something better?
 # September 
 - [X] Balls rendering
 - [X] Materials
-- [ ] BVH
+- [X] BVH
+- [ ] Architecture refactor 
+- [ ] Textures
 - [ ] Quads
 - [ ] Lights
 
