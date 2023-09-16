@@ -12,5 +12,7 @@ iterative v1: 624s!!!??
 small; inline ray_vs_aabb - 251s
 
 
----
+--- 
+original: 238s
 binning: 239s (no difference, maybe we have suboptimal binning axis?)
+binning + sah: 212s (-12%)

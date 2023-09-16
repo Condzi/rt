@@ -20,12 +20,71 @@ struct BVH_Bin {
   AABB aabb = {};
 };
 
+[[nodiscard]] s32
+find_best_axis_using_SAH(Sphere     *spheres,
+                         s32         begin,
+                         s32         end,
+                         AABB const &parent_aabb) {
+  f32 best_sah_value = std::numeric_limits<float>::max();
+  s32 best_axis      = -1;
+
+  // Iterate over each axis
+  for (s32 axis = 0; axis < 3; axis++) {
+    // Initialize bins
+    BVH_Bin bins[NUM_BINS];
+
+    // Populate the bins
+    for (s32 i = begin; i < end; i++) {
+      Vec2 const &sphere_axis      = spheres[i].aabb.v[axis];
+      Vec2 const &parent_aabb_axis = parent_aabb.v[axis];
+
+      f32 const t = (sphere_axis.min - parent_aabb_axis.min) /
+                    (parent_aabb_axis.max - parent_aabb_axis.min);
+
+      s32 const bin_idx = std::min(NUM_BINS - 1, (s32)(t * NUM_BINS));
+
+      bins[bin_idx].size++;
+      bins[bin_idx].aabb = make_aabb_from_aabbs(bins[bin_idx].aabb, spheres[i].aabb);
+    }
+
+    // Calculate SAH for each bin boundary along this axis
+    for (int i = 0; i < NUM_BINS - 1; i++) {
+      BVH_Bin left_bin = {}, right_bin = {};
+
+      // Accumulate the "left" side: <0, i]
+      for (s32 j = 0; j < i; j++) {
+        left_bin.aabb = make_aabb_from_aabbs(left_bin.aabb, bins[j].aabb);
+        left_bin.size += bins[j].size;
+      }
+
+      // Accumulate the "right" side: <i, NUM_BINS]
+      for (s32 j = i; j < NUM_BINS; j++) {
+        right_bin.aabb = make_aabb_from_aabbs(right_bin.aabb, bins[j].aabb);
+        right_bin.size += bins[j].size;
+      }
+
+      f32 const left_sah  = left_bin.size * surface_area(left_bin.aabb);
+      f32 const right_sah = right_bin.size * surface_area(right_bin.aabb);
+      f32 const sah_value = left_sah + right_sah;
+
+      // Update best SAH and corresponding axis
+      if (sah_value < best_sah_value) {
+        best_sah_value = sah_value;
+        best_axis      = axis;
+      }
+    }
+  }
+
+  return best_axis;
+}
+
 static s32 best_bin_found     = 0;
 static s32 best_bin_not_found = 0;
 
 [[nodiscard]] BVH_Node *
 make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
-  s32 const axis = find_longest_axis(parent_aabb);
+  // s32 const axis = find_longest_axis(parent_aabb);
+  s32 const axis = find_best_axis_using_SAH(spheres, begin, end, parent_aabb);
 
   auto comparator = [axis](Sphere const &a, Sphere const &b) {
     return a.aabb.v[axis].min < b.aabb.v[axis].min;
@@ -49,6 +108,7 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
       // Leaf case (two objects) -- we create children as leaves with NULL children
       root->left->left = root->left->right = NULL;
       root->right->left = root->right->right = NULL;
+      // @Todo: does it matter how we split left and right?
       if (comparator(spheres[begin], spheres[begin + 1])) {
         root->left->aabb            = spheres[begin].aabb;
         root->right->aabb           = spheres[begin + 1].aabb;
