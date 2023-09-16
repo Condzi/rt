@@ -128,13 +128,16 @@ main(void) {
       }
     }
 
+    auto t1 = std::chrono::high_resolution_clock::now();
+    auto time =
+        std::chrono::duration_cast<std::chrono::duration<f32>>(t1 - t0).count();
     if (num_finished == rt_out.num_threads) {
       if (rt_time == 0) {
-        auto t1 = std::chrono::high_resolution_clock::now();
-        rt_time =
-            std::chrono::duration_cast<std::chrono::duration<f32>>(t1 - t0).count();
+        rt_time = time;
       }
       ImGui::Text("Finished in %g seconds.", rt_time);
+    } else {
+      ImGui::Text("Elapsed: %g seconds.", time);
     }
     ImGui::End();
 
