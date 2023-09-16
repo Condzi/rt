@@ -15,6 +15,9 @@ struct Ray {
   Vec3 direction_inv;
 };
 
+[[nodiscard]] Ray
+make_ray(Vec3 origin, Vec3 direction);
+
 struct Material;
 struct Sphere {
   Vec3 center;
