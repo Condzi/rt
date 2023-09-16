@@ -20,3 +20,7 @@ binning + sah + wide bvh: 228s (no handwritten simd code)
 + packed (8 elements wide): 180s (without handwritten simd!)
 + packed + custom simd: 145s (no alignas(32))
 + packed + custom simd + alignas(32): 137s (-43%) => 37% of the original time (375s)
+
+---
+original: 137s
+slightly modified ray_vs_aabb: 127s

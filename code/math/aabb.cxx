@@ -36,19 +36,13 @@ ray_vs_aabb(Vec3 const &RT_RESTRICT ray_origin,
             AABB const &RT_RESTRICT aabb) {
   // @Note: Optimized method by Andrew Kensler
   for (int a = 0; a < 3; a++) {
-    f32 const invD = ray_direction_inv.v[a];
-    f32 const orig = ray_origin.v[a];
+    f32 const t0 = (aabb.v[a].min - ray_origin.v[a]) * ray_direction_inv.v[a];
+    f32 const t1 = (aabb.v[a].max - ray_origin.v[a]) * ray_direction_inv.v[a];
 
-    f32 t0 = (aabb.v[a].min - orig) * invD;
-    f32 t1 = (aabb.v[a].max - orig) * invD;
-
-    if (invD < 0) std::swap(t0, t1);
-
-    if (t0 > ray_t.min) ray_t.min = t0;
-    if (t1 < ray_t.max) ray_t.max = t1;
-
-    if (ray_t.max <= ray_t.min) return false;
+    ray_t.min = std::max(ray_t.min, std::min(t0, t1));
+    ray_t.max = std::min(ray_t.max, std::max(t0, t1));
   }
-  return true;
+
+  return ray_t.max >= std::max(0.0f, ray_t.min);
 }
 } // namespace rt
