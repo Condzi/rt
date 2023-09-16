@@ -20,6 +20,15 @@ make_aabb_from_aabbs(AABB const &a, AABB const &b) {
           .z = {.min = ::fmin(a.z.min, b.z.min), .max = ::fmax(a.z.max, b.z.max)}};
 }
 
+[[nodiscard]] f32
+surface_area(AABB const &a) {
+  f32 const x = a.x.max - a.x.min;
+  f32 const y = a.y.max - a.y.min;
+  f32 const z = a.z.max - a.z.min;
+
+  return 2.0f * (x * y + x * z + y * z);
+}
+
 [[nodiscard]] bool
 ray_vs_aabb(Vec3 const &RT_RESTRICT ray_origin,
             Vec3 const &RT_RESTRICT ray_direction_inv,

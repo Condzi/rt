@@ -12,6 +12,14 @@ find_longest_axis(AABB const &a) {
 
 static std::unordered_map<BVH_Node *, Sphere> node_to_sphere;
 
+s32 constexpr static NUM_BINS      = 12;
+s32 constexpr static BIN_NOT_FOUND = -1;
+
+struct BVH_Bin {
+  s32  size = 0;
+  AABB aabb = {};
+};
+
 [[nodiscard]] BVH_Node *
 make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   s32 const axis = find_longest_axis(parent_aabb);
@@ -24,6 +32,7 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   root->aabb     = parent_aabb;
 
   s32 const object_span = end - begin;
+  // leaves CREATION {
   if (object_span <= 2) {
     if (object_span == 1) {
       // Leaf case (one object) - both children are NULL and the payload is a sphere.
@@ -34,7 +43,7 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
     } else if (object_span == 2) {
       root->left  = (BVH_Node *)alloc_perm(sizeof(BVH_Node));
       root->right = (BVH_Node *)alloc_perm(sizeof(BVH_Node));
-      // Leaf case (two objects) -- we create children as leafs with NULL children
+      // Leaf case (two objects) -- we create children as leaves with NULL children
       root->left->left = root->left->right = NULL;
       root->right->left = root->right->right = NULL;
       if (comparator(spheres[begin], spheres[begin + 1])) {
@@ -53,10 +62,84 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
 
     return root;
   }
+  // } leaves CREATION
 
-  std::sort(spheres + begin, spheres + end, comparator);
+  // Divide the objects into bins along the desired axis {
+  BVH_Bin bins[NUM_BINS] = {};
+  // Populate the bins
+  for (s32 i = begin; i < end; i++) {
+    Vec2 const &sphere_axis      = spheres[i].aabb.v[axis];
+    Vec2 const &parent_aabb_axis = parent_aabb.v[axis];
 
-  auto mid = begin + object_span / 2;
+    f32 const t = (sphere_axis.min - parent_aabb_axis.min) /
+                  (parent_aabb_axis.max - parent_aabb_axis.min);
+
+    s32 const bin_idx = std::min(NUM_BINS - 1, (s32)(t * NUM_BINS));
+
+    bins[bin_idx].size++;
+    bins[bin_idx].aabb = make_aabb_from_aabbs(bins[bin_idx].aabb, spheres[i].aabb);
+  }
+
+  // Find the best splitting idx
+  f32 best_cost = std::numeric_limits<f32>::infinity();
+  s32 best_bin  = -1;
+
+  for (s32 i = 0; i < NUM_BINS - 1; i++) {
+    BVH_Bin left_bin = {}, right_bin = {};
+
+    // Accumulate the "left" side: <0, j]
+    for (s32 j = 0; j <= i; j++) {
+      left_bin.aabb = make_aabb_from_aabbs(left_bin.aabb, bins[j].aabb);
+      left_bin.size += bins[j].size;
+    }
+
+    // Accumulate the "right" side: <j, NUM_BINS]
+    for (s32 j = i; j < NUM_BINS; j++) {
+      right_bin.aabb = make_aabb_from_aabbs(right_bin.aabb, bins[j].aabb);
+      right_bin.size += bins[j].size;
+    }
+
+    // Calculate the cost
+    f32 const left_ratio  = left_bin.size * surface_area(left_bin.aabb);
+    f32 const right_ratio = right_bin.size * surface_area(right_bin.aabb);
+    f32 const cost = (1.0f + (left_ratio + right_ratio)) / surface_area(parent_aabb);
+
+    if (cost < best_cost) {
+      best_cost = cost;
+      best_bin  = i;
+    }
+  }
+  // } Binning
+
+  s32 mid = -1;
+
+  // Try to do a bin split
+  if (best_bin != BIN_NOT_FOUND) {
+    Vec2 const &parent_aabb_axis = parent_aabb.v[axis];
+    f32 const   split_value =
+        parent_aabb_axis.min +
+        (best_bin + 1) * (parent_aabb_axis.max - parent_aabb_axis.min) / NUM_BINS;
+
+    auto const binning_comparator = [axis, split_value](Sphere const &s) {
+      return s.aabb.v[axis].min < split_value;
+    };
+
+    mid = (s32)(std::partition(spheres + begin, spheres + end, binning_comparator) -
+                spheres);
+
+    // All spheres fell into one bin - it's not a valid split!
+    if (mid == begin || mid == end) {
+      best_bin = BIN_NOT_FOUND;
+    }
+  }
+
+  // Fallback to median split if bin split is not correct
+  if (best_bin == BIN_NOT_FOUND) {
+    logf("best bin not found\n");
+    std::sort(spheres + begin, spheres + end, comparator);
+
+    mid = begin + object_span / 2;
+  }
   // Precalculate AABBs
   AABB left_aabb, right_aabb;
   for (s32 i = begin; i < mid; i++) {

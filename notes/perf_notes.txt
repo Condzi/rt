@@ -10,3 +10,7 @@ small; ray_vs_aabb in a loop - 264s !!!! (-42%)
 small; ray_vs_aabb in a loop + const ref + restrict - 238s (-57%)
 iterative v1: 624s!!!??
 small; inline ray_vs_aabb - 251s
+
+
+---
+binning: 239s (no difference, maybe we have suboptimal binning axis?)

@@ -19,6 +19,9 @@ make_aabb_from_extremas(Vec3 a, Vec3 b);
 [[nodiscard]] AABB
 make_aabb_from_aabbs(AABB const &a, AABB const &b);
 
+[[nodiscard]] f32
+surface_area(AABB const &a);
+
 [[nodiscard]] bool
 ray_vs_aabb(Vec3 const &RT_RESTRICT ray_origin,
             Vec3 const &RT_RESTRICT ray_direction_inv,
