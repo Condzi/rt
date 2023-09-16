@@ -20,6 +20,9 @@ struct BVH_Bin {
   AABB aabb = {};
 };
 
+static s32 best_bin_found     = 0;
+static s32 best_bin_not_found = 0;
+
 [[nodiscard]] BVH_Node *
 make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   s32 const axis = find_longest_axis(parent_aabb);
@@ -87,13 +90,13 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   for (s32 i = 0; i < NUM_BINS - 1; i++) {
     BVH_Bin left_bin = {}, right_bin = {};
 
-    // Accumulate the "left" side: <0, j]
-    for (s32 j = 0; j <= i; j++) {
+    // Accumulate the "left" side: <0, i]
+    for (s32 j = 0; j < i; j++) {
       left_bin.aabb = make_aabb_from_aabbs(left_bin.aabb, bins[j].aabb);
       left_bin.size += bins[j].size;
     }
 
-    // Accumulate the "right" side: <j, NUM_BINS]
+    // Accumulate the "right" side: <i, NUM_BINS]
     for (s32 j = i; j < NUM_BINS; j++) {
       right_bin.aabb = make_aabb_from_aabbs(right_bin.aabb, bins[j].aabb);
       right_bin.size += bins[j].size;
@@ -130,12 +133,14 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
     // All spheres fell into one bin - it's not a valid split!
     if (mid == begin || mid == end) {
       best_bin = BIN_NOT_FOUND;
+    } else {
+      best_bin_found++;
     }
   }
 
   // Fallback to median split if bin split is not correct
   if (best_bin == BIN_NOT_FOUND) {
-    logf("best bin not found\n");
+    best_bin_not_found++;
     std::sort(spheres + begin, spheres + end, comparator);
 
     mid = begin + object_span / 2;
@@ -152,6 +157,10 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
 
   root->left  = make_BVH(spheres, begin, mid, left_aabb);
   root->right = make_BVH(spheres, mid, end, right_aabb);
+
+  logf("best_bin_found=%d \t best_bin_not_found=%d\n",
+       best_bin_found,
+       best_bin_not_found);
 
   return root;
 }
