@@ -92,6 +92,7 @@ find_best_axis_using_SAH(Sphere     *spheres,
 
 static s32 best_bin_found     = 0;
 static s32 best_bin_not_found = 0;
+static s32 empty_slots        = 0;
 
 [[nodiscard]] BVH_Node *
 make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
@@ -109,17 +110,18 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   // leaves CREATION {
   if (object_span <= LEAF_WIDTH) {
     Sphere_Pack leaf_data;
-    // Firstly, populate with first available sphere
+    // Firstly, populate with invalid boxes
     Sphere const &s0 = spheres[begin];
     for (s32 i = 0; i < LEAF_WIDTH; i++) {
-      leaf_data.center_x[i] = s0.center.x;
-      leaf_data.center_y[i] = s0.center.y;
-      leaf_data.center_z[i] = s0.center.z;
-      leaf_data.radius[i]   = s0.radius;
+      leaf_data.center_x[i] = 0;
+      leaf_data.center_y[i] = 0;
+      leaf_data.center_z[i] = 0;
+      leaf_data.radius[i]   = 0;
       leaf_data.unpacked[i] = s0;
     }
 
     AABB aabb;
+    empty_slots += 8 - object_span;
     for (s32 i = begin; i < end; i++) {
       Sphere const &s_i = spheres[i];
 
@@ -238,6 +240,8 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
          best_bin_found,
          best_bin_not_found);
   */
+
+  logf("empty_slots=%d\n", empty_slots);
 
   return root;
 }

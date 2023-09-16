@@ -62,10 +62,6 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   f32 discriminant = half_b * half_b - a * c;
   // ^^ hot
 
-  if (discriminant < 0) {
-    return false;
-  }
-
   f32 sd = ::sqrtf(discriminant);
 
   // Optimized root calculation
@@ -145,9 +141,9 @@ random_scene();
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 10; // 500
+s32 const SAMPLES_PER_PIXEL = 500; // 500
 // @todo: move to ui
-s32 const MAX_DEPTH = 10; // 50
+s32 const MAX_DEPTH = 50; // 50
 
 f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
 
