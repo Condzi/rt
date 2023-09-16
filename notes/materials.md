@@ -12,3 +12,4 @@
 - https://youtu.be/Qz0KTGYJtUk
 
 
+https://meistdan.github.io/publications/bvh_star/paper.pdf

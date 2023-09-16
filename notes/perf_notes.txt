@@ -1,0 +1,12 @@
+original - 375s
+small bvh_hit - 325s (-15%)
+small bvh_hit + small ray - 328s (no difference?)
+small bvh + small ray + reserve + const t - 325s
+small, iterative -- long...
+small, candidats as arg -- 345
+small, no any_hit - 325s
+small, no random - 315s
+small; ray_vs_aabb in a loop - 264s !!!! (-42%)
+small; ray_vs_Aab in a loop + const ref + restrict - 238s (-57%)
+iterative v1: 624s!!!??
+small; inline ray_vs_aabb - 251s
