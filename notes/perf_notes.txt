@@ -18,3 +18,5 @@ binning: 239s (no difference, maybe we have suboptimal binning axis?)
 binning + sah: 212s (-12%)
 binning + sah + wide bvh: 228s (no handwritten simd code)
 + packed (8 elements wide): 180s (without handwritten simd!)
++ packed + custom simd: 145s (no alignas(32))
++ packed + custom simd + alignas(32): 139s

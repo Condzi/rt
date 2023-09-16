@@ -11,14 +11,13 @@ find_longest_axis(AABB const &a) {
 }
 
 // aka number of spheres per leaf
-// @Note: 8 beacuse AVX2. Maybe other widths would be better?
+// @Note: 8 beacuse AVX2.
 s32 constexpr static LEAF_WIDTH = 8;
 struct Sphere_Pack {
-  // Packed
-  f32 center_x[LEAF_WIDTH];
-  f32 center_y[LEAF_WIDTH];
-  f32 center_z[LEAF_WIDTH];
-  f32 radius[LEAF_WIDTH];
+  alignas(32) f32 center_x[LEAF_WIDTH];
+  alignas(32) f32 center_y[LEAF_WIDTH];
+  alignas(32) f32 center_z[LEAF_WIDTH];
+  alignas(32) f32 radius[LEAF_WIDTH];
 
   Sphere unpacked[LEAF_WIDTH];
 };
@@ -234,9 +233,11 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   root->left  = make_BVH(spheres, begin, mid, left_aabb);
   root->right = make_BVH(spheres, mid, end, right_aabb);
 
-  logf("best_bin_found=%d \t best_bin_not_found=%d\n",
-       best_bin_found,
-       best_bin_not_found);
+  /*
+    logf("best_bin_found=%d \t best_bin_not_found=%d\n",
+         best_bin_found,
+         best_bin_not_found);
+  */
 
   return root;
 }
@@ -259,53 +260,41 @@ hit_BVH_internal(BVH_Node *root, Vec3 const &ray_origin, Vec3 const &ray_inv_dir
   hit_BVH_internal(root->right, ray_origin, ray_inv_dir);
 }
 
-[[nodiscard]] std::vector<s32>
-discriminant_check(Ray const &r, Sphere_Pack const &spheres) {
-  std::vector<s32> hit_indices;
-  hit_indices.reserve(8);
+[[nodiscard]] u32
+discriminant_check(Ray const &r, Sphere_Pack const &s_pack) {
+  // Load packed sphere data into AVX2 registers
+  __m256 center_x = _mm256_loadu_ps(s_pack.center_x);
+  __m256 center_y = _mm256_loadu_ps(s_pack.center_y);
+  __m256 center_z = _mm256_loadu_ps(s_pack.center_z);
+  __m256 radius   = _mm256_loadu_ps(s_pack.radius);
 
+  // Calculate oc = r.origin - s.center for each packed sphere
+  __m256 oc_x = _mm256_sub_ps(_mm256_set1_ps(r.origin.x), center_x);
+  __m256 oc_y = _mm256_sub_ps(_mm256_set1_ps(r.origin.y), center_y);
+  __m256 oc_z = _mm256_sub_ps(_mm256_set1_ps(r.origin.z), center_z);
+
+  // Calculate a, half_b, and c for each packed sphere
   __m256 a =
       _mm256_set1_ps(r.direction.x * r.direction.x + r.direction.y * r.direction.y +
                      r.direction.z * r.direction.z);
+  __m256 half_b =
+      _mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(oc_x, _mm256_set1_ps(r.direction.x)),
+                                  _mm256_mul_ps(oc_y, _mm256_set1_ps(r.direction.y))),
+                    _mm256_mul_ps(oc_z, _mm256_set1_ps(r.direction.z)));
+  __m256 c = _mm256_sub_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(oc_x, oc_x),
+                                                       _mm256_mul_ps(oc_y, oc_y)),
+                                         _mm256_mul_ps(oc_z, oc_z)),
+                           _mm256_mul_ps(radius, radius));
 
-  __m256 centers_x = _mm256_loadu_ps(spheres.center_x);
-  __m256 centers_y = _mm256_loadu_ps(spheres.center_y);
-  __m256 centers_z = _mm256_loadu_ps(spheres.center_z);
+  // Calculate the discriminant for each packed sphere
+  __m256 discriminant =
+      _mm256_sub_ps(_mm256_mul_ps(half_b, half_b), _mm256_mul_ps(a, c));
 
-  __m256 oc_x = _mm256_sub_ps(_mm256_set1_ps(r.origin.x), centers_x);
-  __m256 oc_y = _mm256_sub_ps(_mm256_set1_ps(r.origin.y), centers_y);
-  __m256 oc_z = _mm256_sub_ps(_mm256_set1_ps(r.origin.z), centers_z);
+  // Check if any discriminant is >= 0
+  __m256 mask = _mm256_cmp_ps(discriminant, _mm256_setzero_ps(), _CMP_GE_OQ);
 
-  __m256 half_b = _mm256_fmadd_ps(
-      oc_x,
-      _mm256_set1_ps(r.direction.x),
-      _mm256_fmadd_ps(oc_y,
-                      _mm256_set1_ps(r.direction.y),
-                      _mm256_mul_ps(oc_z, _mm256_set1_ps(r.direction.z))));
-
-  __m256 c = _mm256_fmadd_ps(
-      oc_x,
-      oc_x,
-      _mm256_fmadd_ps(
-          oc_y,
-          oc_y,
-          _mm256_fmadd_ps(oc_z,
-                          oc_z,
-                          _mm256_mul_ps(_mm256_loadu_ps(spheres.radius),
-                                        _mm256_loadu_ps(spheres.radius)))));
-
-  __m256 discriminant = _mm256_fmsub_ps(half_b, half_b, _mm256_mul_ps(a, c));
-
-  __m256 mask     = _mm256_cmp_ps(discriminant, _mm256_setzero_ps(), _CMP_GE_OS);
-  s32    mask_val = _mm256_movemask_ps(mask);
-
-  for (s32 i = 0; i < 8; i++) {
-    if (mask_val & (1 << i)) {
-      hit_indices.push_back(i);
-    }
-  }
-
-  return hit_indices;
+  u32 mask_val = (u32)_mm256_movemask_ps(mask);
+  return mask_val;
 }
 
 [[nodiscard]] bool
@@ -316,32 +305,21 @@ hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi) {
   hit_BVH_internal(root, ray.origin, ray.direction_inv);
 
   bool any_hit = false;
+
   for (BVH_Node *node : candidates) {
     auto const &pack = leaf_to_sphere_pack[node];
 
-    for (auto const &p : pack.unpacked) {
-      if (hit_sphere(ray, p, t.min, t.max, hi)) {
-        t.max   = hi.t;
-        any_hit = true;
+    // Eliminate some of the 8 spheres early on
+    u32 hit_mask = discriminant_check(ray, pack);
+    for (s32 i = 0; i < 8; i++) {
+      if (hit_mask & (1 << i)) {
+        if (hit_sphere(ray, pack.unpacked[i], t.min, t.max, hi)) {
+          t.max   = hi.t;
+          any_hit = true;
+        }
       }
     }
   }
-  /*
-  for (BVH_Node *node : candidates) {
-    auto const &pack = leaf_to_sphere_pack[node];
-
-    auto hit_indices = discriminant_check(ray, pack);
-    if (hit_indices.size() > 0) {
-      logf("hit!\n");
-    }
-    for (s32 i : hit_indices) {
-      if (hit_sphere(ray, pack.unpacked[i], t.min, t.max, hi)) {
-        t.max   = hi.t;
-        any_hit = true;
-      }
-    }
-  }
-  */
 
   return any_hit;
 }
