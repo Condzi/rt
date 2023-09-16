@@ -24,3 +24,4 @@ binning + sah + wide bvh: 228s (no handwritten simd code)
 ---
 original: 137s
 slightly modified ray_vs_aabb: 127s
+calculate ray_vs_aabb first, then do the recursive call: 142s
