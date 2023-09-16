@@ -10,7 +10,10 @@ find_longest_axis(AABB const &a) {
   return 2;
 }
 
-static std::unordered_map<BVH_Node *, Sphere> node_to_sphere;
+// aka number of spheres per leaf
+s32 constexpr static LEAF_WIDTH = 4;
+using Leaf_Data                 = std::array<Sphere, (size_t)LEAF_WIDTH>;
+static std::unordered_map<BVH_Node *, Leaf_Data> leaf_to_sphere;
 
 s32 constexpr static NUM_BINS      = 12;
 s32 constexpr static BIN_NOT_FOUND = -1;
@@ -48,7 +51,7 @@ find_best_axis_using_SAH(Sphere     *spheres,
     }
 
     // Calculate SAH for each bin boundary along this axis
-    for (int i = 0; i < NUM_BINS - 1; i++) {
+    for (s32 i = 0; i < NUM_BINS - 1; i++) {
       BVH_Bin left_bin = {}, right_bin = {};
 
       // Accumulate the "left" side: <0, i]
@@ -95,33 +98,21 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
 
   s32 const object_span = end - begin;
   // leaves CREATION {
-  if (object_span <= 2) {
-    if (object_span == 1) {
-      // Leaf case (one object) - both children are NULL and the payload is a sphere.
-      root->left           = NULL;
-      root->right          = NULL;
-      root->aabb           = spheres[begin].aabb;
-      node_to_sphere[root] = spheres[begin];
-    } else if (object_span == 2) {
-      root->left  = (BVH_Node *)alloc_perm(sizeof(BVH_Node));
-      root->right = (BVH_Node *)alloc_perm(sizeof(BVH_Node));
-      // Leaf case (two objects) -- we create children as leaves with NULL children
-      root->left->left = root->left->right = NULL;
-      root->right->left = root->right->right = NULL;
-      // @Todo: does it matter how we split left and right?
-      if (comparator(spheres[begin], spheres[begin + 1])) {
-        root->left->aabb            = spheres[begin].aabb;
-        root->right->aabb           = spheres[begin + 1].aabb;
-        node_to_sphere[root->left]  = spheres[begin];
-        node_to_sphere[root->right] = spheres[begin + 1];
-      } else {
-        root->left->aabb  = spheres[begin + 1].aabb;
-        root->right->aabb = spheres[begin].aabb;
+  if (object_span <= LEAF_WIDTH) {
+    Leaf_Data leaf_data;
+    leaf_data.fill(spheres[begin]); // Always fill the entire array.
 
-        node_to_sphere[root->left]  = spheres[begin + 1];
-        node_to_sphere[root->right] = spheres[begin];
-      }
+    AABB aabb;
+    for (s32 i = begin; i < end; i++) {
+      leaf_data[i - begin] = spheres[i];
+      aabb                 = make_aabb_from_aabbs(aabb, spheres[i].aabb);
     }
+
+    // Leaf case (one object) - both children are NULL and the payload is a sphere.
+    root->left           = NULL;
+    root->right          = NULL;
+    root->aabb           = aabb; // is this aabb ok?
+    leaf_to_sphere[root] = leaf_data;
 
     return root;
   }
@@ -252,10 +243,17 @@ hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi) {
 
   bool any_hit = false;
   for (BVH_Node *node : candidates) {
-    Sphere const &sphere = node_to_sphere[node];
-    if (hit_sphere(ray, sphere, t.min, t.max, hi)) {
-      any_hit = true;
-      t.max   = hi.t;
+    Leaf_Data const &leaf_data = leaf_to_sphere[node];
+    for (s32 i = 0; i < LEAF_WIDTH; i += 2) {
+      if (hit_sphere(ray, leaf_data[i], t.min, t.max, hi)) {
+        t.max   = hi.t;
+        any_hit = true;
+      }
+
+      if (hit_sphere(ray, leaf_data[i + 1], t.min, t.max, hi)) {
+        t.max   = hi.t;
+        any_hit = true;
+      }
     }
   }
 

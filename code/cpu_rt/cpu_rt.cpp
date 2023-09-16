@@ -42,7 +42,7 @@ at(Ray const &r, f32 t) {
 }
 
 // 12.4s for 10-10 params
-[[nodiscard]] bool
+[[nodiscard]] __forceinline bool
 hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   Vec3 oc = r.origin - s.center;
 
