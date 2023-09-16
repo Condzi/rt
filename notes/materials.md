@@ -13,3 +13,6 @@
 
 
 https://meistdan.github.io/publications/bvh_star/paper.pdf
+
+Intel RT library:
+https://github.com/embree/embree/tree/master
