@@ -11,9 +11,19 @@ find_longest_axis(AABB const &a) {
 }
 
 // aka number of spheres per leaf
-s32 constexpr static LEAF_WIDTH = 4;
-using Leaf_Data                 = std::array<Sphere, (size_t)LEAF_WIDTH>;
-static std::unordered_map<BVH_Node *, Leaf_Data> leaf_to_sphere;
+// @Note: 8 beacuse AVX2. Maybe other widths would be better?
+s32 constexpr static LEAF_WIDTH = 8;
+struct Sphere_Pack {
+  // Packed
+  f32 center_x[LEAF_WIDTH];
+  f32 center_y[LEAF_WIDTH];
+  f32 center_z[LEAF_WIDTH];
+  f32 radius[LEAF_WIDTH];
+
+  Sphere unpacked[LEAF_WIDTH];
+};
+
+static std::unordered_map<BVH_Node *, Sphere_Pack> leaf_to_sphere_pack;
 
 s32 constexpr static NUM_BINS      = 12;
 s32 constexpr static BIN_NOT_FOUND = -1;
@@ -99,20 +109,35 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   s32 const object_span = end - begin;
   // leaves CREATION {
   if (object_span <= LEAF_WIDTH) {
-    Leaf_Data leaf_data;
-    leaf_data.fill(spheres[begin]); // Always fill the entire array.
+    Sphere_Pack leaf_data;
+    // Firstly, populate with first available sphere
+    Sphere const &s0 = spheres[begin];
+    for (s32 i = 0; i < LEAF_WIDTH; i++) {
+      leaf_data.center_x[i] = s0.center.x;
+      leaf_data.center_y[i] = s0.center.y;
+      leaf_data.center_z[i] = s0.center.z;
+      leaf_data.radius[i]   = s0.radius;
+      leaf_data.unpacked[i] = s0;
+    }
 
     AABB aabb;
     for (s32 i = begin; i < end; i++) {
-      leaf_data[i - begin] = spheres[i];
-      aabb                 = make_aabb_from_aabbs(aabb, spheres[i].aabb);
+      Sphere const &s_i = spheres[i];
+
+      leaf_data.center_x[i - begin] = s_i.center.x;
+      leaf_data.center_y[i - begin] = s_i.center.y;
+      leaf_data.center_z[i - begin] = s_i.center.z;
+      leaf_data.radius[i - begin]   = s_i.radius;
+      leaf_data.unpacked[i - begin] = s_i;
+
+      aabb = make_aabb_from_aabbs(aabb, s_i.aabb);
     }
 
     // Leaf case (one object) - both children are NULL and the payload is a sphere.
     root->left           = NULL;
     root->right          = NULL;
     root->aabb           = aabb; // is this aabb ok?
-    leaf_to_sphere[root] = leaf_data;
+    leaf_to_sphere_pack[root] = leaf_data;
 
     return root;
   }
@@ -234,6 +259,55 @@ hit_BVH_internal(BVH_Node *root, Vec3 const &ray_origin, Vec3 const &ray_inv_dir
   hit_BVH_internal(root->right, ray_origin, ray_inv_dir);
 }
 
+[[nodiscard]] std::vector<s32>
+discriminant_check(Ray const &r, Sphere_Pack const &spheres) {
+  std::vector<s32> hit_indices;
+  hit_indices.reserve(8);
+
+  __m256 a =
+      _mm256_set1_ps(r.direction.x * r.direction.x + r.direction.y * r.direction.y +
+                     r.direction.z * r.direction.z);
+
+  __m256 centers_x = _mm256_loadu_ps(spheres.center_x);
+  __m256 centers_y = _mm256_loadu_ps(spheres.center_y);
+  __m256 centers_z = _mm256_loadu_ps(spheres.center_z);
+
+  __m256 oc_x = _mm256_sub_ps(_mm256_set1_ps(r.origin.x), centers_x);
+  __m256 oc_y = _mm256_sub_ps(_mm256_set1_ps(r.origin.y), centers_y);
+  __m256 oc_z = _mm256_sub_ps(_mm256_set1_ps(r.origin.z), centers_z);
+
+  __m256 half_b = _mm256_fmadd_ps(
+      oc_x,
+      _mm256_set1_ps(r.direction.x),
+      _mm256_fmadd_ps(oc_y,
+                      _mm256_set1_ps(r.direction.y),
+                      _mm256_mul_ps(oc_z, _mm256_set1_ps(r.direction.z))));
+
+  __m256 c = _mm256_fmadd_ps(
+      oc_x,
+      oc_x,
+      _mm256_fmadd_ps(
+          oc_y,
+          oc_y,
+          _mm256_fmadd_ps(oc_z,
+                          oc_z,
+                          _mm256_mul_ps(_mm256_loadu_ps(spheres.radius),
+                                        _mm256_loadu_ps(spheres.radius)))));
+
+  __m256 discriminant = _mm256_fmsub_ps(half_b, half_b, _mm256_mul_ps(a, c));
+
+  __m256 mask     = _mm256_cmp_ps(discriminant, _mm256_setzero_ps(), _CMP_GE_OS);
+  s32    mask_val = _mm256_movemask_ps(mask);
+
+  for (s32 i = 0; i < 8; i++) {
+    if (mask_val & (1 << i)) {
+      hit_indices.push_back(i);
+    }
+  }
+
+  return hit_indices;
+}
+
 [[nodiscard]] bool
 hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi) {
   candidates.reserve(128);
@@ -243,19 +317,31 @@ hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi) {
 
   bool any_hit = false;
   for (BVH_Node *node : candidates) {
-    Leaf_Data const &leaf_data = leaf_to_sphere[node];
-    for (s32 i = 0; i < LEAF_WIDTH; i += 2) {
-      if (hit_sphere(ray, leaf_data[i], t.min, t.max, hi)) {
-        t.max   = hi.t;
-        any_hit = true;
-      }
+    auto const &pack = leaf_to_sphere_pack[node];
 
-      if (hit_sphere(ray, leaf_data[i + 1], t.min, t.max, hi)) {
+    for (auto const &p : pack.unpacked) {
+      if (hit_sphere(ray, p, t.min, t.max, hi)) {
         t.max   = hi.t;
         any_hit = true;
       }
     }
   }
+  /*
+  for (BVH_Node *node : candidates) {
+    auto const &pack = leaf_to_sphere_pack[node];
+
+    auto hit_indices = discriminant_check(ray, pack);
+    if (hit_indices.size() > 0) {
+      logf("hit!\n");
+    }
+    for (s32 i : hit_indices) {
+      if (hit_sphere(ray, pack.unpacked[i], t.min, t.max, hi)) {
+        t.max   = hi.t;
+        any_hit = true;
+      }
+    }
+  }
+  */
 
   return any_hit;
 }
