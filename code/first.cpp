@@ -145,7 +145,7 @@ main(void) {
 
     clear_temp_mem();
 
-    auto res = (ID3D11ShaderResourceView*)rt_out_as_texture;
+    auto res = (ID3D11ShaderResourceView *)rt_out_as_texture;
     d3d_safe_release_(res);
   }
 

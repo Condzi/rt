@@ -241,7 +241,7 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
          best_bin_not_found);
   */
 
-  logf("empty_slots=%d\n", empty_slots);
+  // logf("empty_slots=%d\n", empty_slots);
 
   return root;
 }
