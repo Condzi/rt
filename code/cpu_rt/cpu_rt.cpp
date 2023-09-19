@@ -87,29 +87,8 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   return true;
 }
 
-[[nodiscard]] bool
-hit_world(Ray const &r, World const &w, f32 t_min, f32 t_max, Hit_Info &hi) {
-  Hit_Info hi_temp;
-  bool     hit_anything = false;
-  f32      closest      = t_max;
-
-  s32 hit_idx = -1;
-  for (s32 i = 0; i < w.num_spheres; i++) {
-    // @Hot
-    if (hit_sphere(r, w.spheres[i], t_min, closest, hi_temp)) {
-      hit_anything = true;
-      closest      = hi_temp.t;
-      hi           = hi_temp;
-      hit_idx      = i;
-    }
-  }
-
-  return hit_anything;
-}
-
 // @Hot
 [[nodiscard]] Vec3
-// ray_color(Ray const &r, World const &w, s32 depth) {
 ray_color(Ray const &r, BVH_Node *const root, s32 depth) {
   if (depth == 0) {
     return Vec3 {0, 0, 0};
@@ -117,7 +96,6 @@ ray_color(Ray const &r, BVH_Node *const root, s32 depth) {
 
   Hit_Info hi;
   // @Note: 0.001 instead 0 fixes shadow acne
-  // if (hit_world(r, w, 0.001f, FLT_MAX, hi)) {
   if (hit_BVH(root, r, {.min = 0.001f, .max = FLT_MAX}, hi)) {
     Ray  scattered;
     Vec3 attenuated_color;
