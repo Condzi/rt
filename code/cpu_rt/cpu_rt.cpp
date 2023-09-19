@@ -1,6 +1,7 @@
 namespace rt {
 [[nodiscard]] Ray
 make_ray(Vec3 origin, Vec3 direction) {
+  total_ray_count++;
   return {.origin        = origin,
           .direction     = direction,
           .direction_inv = Vec3 {1, 1, 1} / direction};

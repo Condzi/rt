@@ -136,8 +136,10 @@ main(void) {
         rt_time = time;
       }
       ImGui::Text("Finished in %g seconds.", rt_time);
+      ImGui::Text("%g Mrays/s", ((s64)total_ray_count / rt_time) / 1'000'000);
     } else {
       ImGui::Text("Elapsed: %g seconds.", time);
+      ImGui::Text("%g Mrays/s", ((s64)total_ray_count / time) / 1'000'000);
     }
     ImGui::End();
 
