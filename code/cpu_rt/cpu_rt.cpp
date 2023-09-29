@@ -15,18 +15,6 @@ struct Hit_Info {
   bool      front_face;
 };
 
-[[nodiscard]] Sphere
-make_sphere(Vec3 center, f32 r) {
-  Vec3 const radius_vec {.x = r, .y = r, .z = r};
-  Vec3 const aabb_min = center - radius_vec;
-  Vec3 const aabb_max = center + radius_vec;
-
-  return {.center   = center,
-          .radius   = r,
-          .aabb     = make_aabb_from_extremes(aabb_min, aabb_max),
-          .material = NULL};
-}
-
 struct World {
   Sphere    *spheres;
   s32        num_spheres_reserved;
@@ -295,3 +283,4 @@ random_scene() {
 #include "camera.cxx"
 #include "materials.cxx"
 #include "bvh.cxx"
+#include "shapes.cxx"

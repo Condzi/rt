@@ -20,19 +20,11 @@ static std::atomic<s64> total_ray_count{0};
 [[nodiscard]] Ray
 make_ray(Vec3 origin, Vec3 direction);
 
-struct Material;
-struct Sphere {
-  Vec3 center;
-  f32  radius; // @Note: can be negative: surface normals will point inward.
-  AABB aabb;
-  // Move this somewhere else?
-  Material *material;
-};
-
 [[nodiscard]] Rt_Output
 do_ray_tracing();
 } // namespace rt
 
 #include "camera.hxx"
+#include "shapes.hxx"
 #include "materials.hxx"
 #include "bvh.hxx"
