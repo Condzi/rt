@@ -7,3 +7,4 @@
 #include "debugger.cxx"
 #include "error_handling.cxx"
 #include "time.cxx"
+#include "spinlock.cxx"

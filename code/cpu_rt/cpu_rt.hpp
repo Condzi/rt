@@ -15,6 +15,11 @@ struct Ray {
   Vec3 direction_inv;
 };
 
+static std::atomic<s64> total_ray_count{0};
+
+[[nodiscard]] Ray
+make_ray(Vec3 origin, Vec3 direction);
+
 struct Material;
 struct Sphere {
   Vec3 center;

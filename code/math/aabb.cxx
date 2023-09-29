@@ -20,61 +20,29 @@ make_aabb_from_aabbs(AABB const &a, AABB const &b) {
           .z = {.min = ::fmin(a.z.min, b.z.min), .max = ::fmax(a.z.max, b.z.max)}};
 }
 
+[[nodiscard]] f32
+surface_area(AABB const &a) {
+  f32 const x = a.x.max - a.x.min;
+  f32 const y = a.y.max - a.y.min;
+  f32 const z = a.z.max - a.z.min;
+
+  return 2.0f * (x * y + x * z + y * z);
+}
+
 [[nodiscard]] bool
-ray_vs_aabb(Vec3 ray_origin, Vec3 ray_direction_inv, Vec2 ray_t, AABB const &aabb) {
-  // @Note: originally in the book this is in a loop, but to avoid adding mental
-  //        complexity & improve performance, I unrolled it.
+ray_vs_aabb(Vec3 const &RT_RESTRICT ray_origin,
+            Vec3 const &RT_RESTRICT ray_direction_inv,
+            Vec2                    ray_t,
+            AABB const &RT_RESTRICT aabb) {
   // @Note: Optimized method by Andrew Kensler
+  for (int a = 0; a < 3; a++) {
+    f32 const t0 = (aabb.v[a].min - ray_origin.v[a]) * ray_direction_inv.v[a];
+    f32 const t1 = (aabb.v[a].max - ray_origin.v[a]) * ray_direction_inv.v[a];
 
-  /**
-   * X axis
-   */
-  f32 invD = ray_direction_inv.x;
-  f32 orig = ray_origin.x;
+    ray_t.min = std::max(ray_t.min, std::min(t0, t1));
+    ray_t.max = std::min(ray_t.max, std::max(t0, t1));
+  }
 
-  f32 t0 = (aabb.x.min - orig) * invD;
-  f32 t1 = (aabb.x.max - orig) * invD;
-
-  if (invD < 0) rt_swap(t0, t1);
-
-  if (t0 > ray_t.min) ray_t.min = t0;
-  if (t1 < ray_t.max) ray_t.max = t1;
-
-  if (ray_t.max <= ray_t.min) return false;
-
-  /**
-   * Y axis
-   */
-  invD = ray_direction_inv.y;
-  orig = ray_origin.y;
-
-  t0 = (aabb.y.min - orig) * invD;
-  t1 = (aabb.y.max - orig) * invD;
-
-  if (invD < 0) rt_swap(t0, t1);
-
-  if (t0 > ray_t.min) ray_t.min = t0;
-  if (t1 < ray_t.max) ray_t.max = t1;
-
-  if (ray_t.max <= ray_t.min) return false;
-
-  /**
-   * Z axis
-   */
-  invD = ray_direction_inv.z;
-  orig = ray_origin.z;
-
-  t0 = (aabb.z.min - orig) * invD;
-  t1 = (aabb.z.max - orig) * invD;
-
-  if (invD < 0) rt_swap(t0, t1);
-
-  if (t0 > ray_t.min) ray_t.min = t0;
-  if (t1 < ray_t.max) ray_t.max = t1;
-
-  if (ray_t.max <= ray_t.min) return false;
-
-  // All axis overleap, we got a hit
-  return true;
+  return ray_t.max >= std::max(0.0f, ray_t.min);
 }
 } // namespace rt

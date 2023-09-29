@@ -7,10 +7,12 @@
 #include <cmath>
 #include <stdarg.h> // logf
 
+#include <array>
 #include <algorithm> // std::sort in bvh
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <unordered_map>
 
 #include "first.hpp"
 
@@ -126,13 +128,18 @@ main(void) {
       }
     }
 
+    auto t1 = std::chrono::high_resolution_clock::now();
+    auto time =
+        std::chrono::duration_cast<std::chrono::duration<f32>>(t1 - t0).count();
     if (num_finished == rt_out.num_threads) {
       if (rt_time == 0) {
-        auto t1 = std::chrono::high_resolution_clock::now();
-        rt_time =
-            std::chrono::duration_cast<std::chrono::duration<f32>>(t1 - t0).count();
+        rt_time = time;
       }
       ImGui::Text("Finished in %g seconds.", rt_time);
+      ImGui::Text("%g Mrays/s", ((s64)total_ray_count / rt_time) / 1'000'000);
+    } else {
+      ImGui::Text("Elapsed: %g seconds.", time);
+      ImGui::Text("%g Mrays/s", ((s64)total_ray_count / time) / 1'000'000);
     }
     ImGui::End();
 
@@ -140,7 +147,7 @@ main(void) {
 
     clear_temp_mem();
 
-    auto res = (ID3D11ShaderResourceView*)rt_out_as_texture;
+    auto res = (ID3D11ShaderResourceView *)rt_out_as_texture;
     d3d_safe_release_(res);
   }
 

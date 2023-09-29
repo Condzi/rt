@@ -12,3 +12,10 @@
 - https://youtu.be/Qz0KTGYJtUk
 
 
+https://meistdan.github.io/publications/bvh_star/paper.pdf
+
+Intel RT library:
+https://github.com/embree/embree/tree/master
+
+Ray vs AABB algorithms
+https://tavianator.com/2022/ray_box_boundary.html

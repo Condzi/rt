@@ -40,11 +40,10 @@ get_ray_at(Camera const &cam, f32 s, f32 t) {
   Vec3 const rd     = random_in_unit_disk() * cam.lens_radius;
   Vec3 const offset = cam.u * rd.x + cam.v * rd.y;
 
-  Ray result = {.origin    = cam.origin + offset,
-                .direction = cam.lower_left_corner + cam.horizontal * s +
-                             cam.vertical * t - cam.origin - offset};
+  Vec3 const origin    = cam.origin + offset;
+  Vec3 const direction = cam.lower_left_corner + cam.horizontal * s +
+                         cam.vertical * t - cam.origin - offset;
 
-  result.direction_inv = Vec3 {.x=1, .y=1, .z=1} / result.direction;
-  return result;
+  return make_ray(origin, direction);
 }
 } // namespace rt
