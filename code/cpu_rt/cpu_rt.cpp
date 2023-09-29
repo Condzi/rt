@@ -75,6 +75,46 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   return true;
 }
 
+// 1. finding the plane that contains that quad,
+// 2. solving for the intersection of a ray and the quad-containing plane,
+// 3. determining if the hit point lies inside the quad.
+[[nodiscard]] bool
+hit_quad(Ray const &r, Quad const &q, f32 t_min, f32 t_max, Hit_Info &hi) {
+  f32 const denom = dot(q.normal, r.direction);
+
+  // Ray is parallel to the plane
+  if (::fabs(denom) < 1e-8) {
+    return false;
+  }
+
+  // Intersection point is outside the ray interval
+  f32 const t = (q.D - dot(q.normal, r.origin)) / denom;
+  if (t < t_min || t > t_max) {
+    return false;
+  }
+
+  Vec3 const intersection_point = at(r, t);
+  // Determine the hit point lies within the planar shape using its plane coordinates.
+
+  Vec3 const planar_hitpt_vector = intersection_point - q.Q;
+  f32 const  alpha               = dot(q.w, cross(planar_hitpt_vector, q.v));
+  f32 const  beta                = dot(q.w, cross(q.u, planar_hitpt_vector));
+
+  // Check if we're inside the (0, 1) range
+  if ((alpha < 0 || alpha > 1) || (beta < 0 || beta > 1)) {
+    return false;
+  }
+
+  // Ray hits the 2D shape; set the hit record and return true.
+  hi.t          = t;
+  hi.p          = intersection_point;
+  hi.material   = q.material;
+  hi.front_face = (dot(r.direction, q.normal) < 0);
+  hi.normal     = q.normal * (hi.front_face ? 1.f : -1.f);
+
+  return true;
+}
+
 // @Hot
 [[nodiscard]] Vec3
 ray_color(Ray const &r, BVH_Node *const root, s32 depth) {

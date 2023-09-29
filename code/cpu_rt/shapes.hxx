@@ -19,6 +19,11 @@ struct Quad {
   Vec3 Q;    //< lower-left corner
   Vec3 u, v; // Sides, relative to the corner.
 
+  // Used for ray-quad calculations
+  Vec3 normal;
+  f32  D;
+  Vec3 w;
+
   AABB      aabb;
   Material *material;
 };

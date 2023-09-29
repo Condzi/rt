@@ -19,6 +19,18 @@ make_quad(Vec3 Q, Vec3 u, Vec3 v) {
   AABB aabb = make_aabb_from_extremes(aabb_min, aabb_max);
   aabb      = add_padding_if_too_narrow(aabb);
 
-  return {.Q = Q, .u = u, .v = v, .aabb = aabb, .material = NULL};
+  Vec3 n      = cross(u, v);
+  Vec3 normal = normalized(n);
+  f32  D      = dot(normal, Q);
+  Vec3 w      = n * (1 / dot(n, n));
+
+  return {.Q        = Q,
+          .u        = u,
+          .v        = v,
+          .normal   = normal,
+          .D        = D,
+          .w        = w,
+          .aabb     = aabb,
+          .material = NULL};
 }
 } // namespace rt
