@@ -1,5 +1,5 @@
-# Raytracing Engine
-Official title: *"3D objects rendering using raytraycing and collision detection algorithms"*  
+# Ray Tracing Engine
+Official title: *"3D objects rendering using ray tracing and collision detection algorithms"*  
 Supervisor: dr inż. Mateusz Cholewiński
 # About
 This is my final project for engineering degree from *Electronic and Computer Engineering* at *Wroclaw University of Science and Technology* (2023/2024).    

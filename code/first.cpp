@@ -93,9 +93,9 @@ main(void) {
   std::chrono::high_resolution_clock::time_point t0 =
       std::chrono::high_resolution_clock::now();
 
-  Rt_Output rt_out = do_raytraycing();
+  Rt_Output rt_out = do_ray_tracing();
 
-  // write_png_or_panic("hello_raytraycing.png", rt_out.rgba_data, rt_out.image_size);
+  // write_png_or_panic("hello_ray_tracing.png", rt_out.rgba_data, rt_out.image_size);
 
   while (!window_is_closed()) {
     win32_message_loop();
@@ -106,8 +106,8 @@ main(void) {
 
     dear_imgui_update();
 
-    ImGui::Begin("CPU Raytracing");
-    // @Note: we do it over and over again because RT is raytracing all the time
+    ImGui::Begin("CPU Ray Tracing");
+    // @Note: we do it over and over again because RT is ray tracing all the time
     //       In future just add an atomic that counts number of threads finished.
     ImTextureID rt_out_as_texture = dear_imgui_create_texture_from_rt_output(rt_out);
     ImGui::Image(rt_out_as_texture,

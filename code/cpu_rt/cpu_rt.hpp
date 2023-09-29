@@ -30,7 +30,7 @@ struct Sphere {
 };
 
 [[nodiscard]] Rt_Output
-do_raytraycing();
+do_ray_tracing();
 } // namespace rt
 
 #include "camera.hxx"

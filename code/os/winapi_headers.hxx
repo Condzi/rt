@@ -60,7 +60,7 @@
 #pragma comment(lib, "d3d11.lib")       // direct3D library
 #pragma comment(lib, "dxgi.lib")        // directx graphics interface
 #pragma comment(lib, "d3dcompiler.lib") // shader compiler
-                                        // DirectX 11}
+// } DirectX 11
 
 // ImGui Backend dependencies {
 #include <windowsx.h> // GET_X_LPARAM(), GET_Y_LPARAM()
