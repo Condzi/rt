@@ -15,6 +15,7 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
 - [X] BVH
 - [ ] Quads
 - [ ] Architecture refactor 
+    - ubermaterial
 - [ ] Textures
 - [ ] Lights
 

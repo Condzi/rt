@@ -28,4 +28,8 @@ ray_vs_aabb(Vec3 const &RT_RESTRICT ray_origin,
             Vec2                    ray_t,
             AABB const &RT_RESTRICT aabb);
 
+// If a side is too narrow it will mess up with BVH and ray vs aabb calculations,
+// so we expand it a bit.
+[[nodiscard]] AABB
+add_padding_if_too_narrow(AABB aabb);
 } // namespace rt

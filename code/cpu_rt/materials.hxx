@@ -1,7 +1,7 @@
 namespace rt {
 struct Hit_Info;
 
-// @TODO: remove polimorphism; use function pointers instead so we can use malloc
+// @TODO: remove polymorphism; use function pointers instead so we can use malloc
 //        and don't have to care about vtable ptr. -- kkubacki 07.09.2023
 struct Material {
   // Returns true when the ray was absorbed.
