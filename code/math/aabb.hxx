@@ -14,7 +14,7 @@ union AABB {
 make_aabb_from_intervals(Vec2 x, Vec2 y, Vec2 z);
 
 [[nodiscard]] AABB
-make_aabb_from_extremas(Vec3 a, Vec3 b);
+make_aabb_from_extremes(Vec3 a, Vec3 b);
 
 [[nodiscard]] AABB
 make_aabb_from_aabbs(AABB const &a, AABB const &b);

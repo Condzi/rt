@@ -5,7 +5,7 @@ make_aabb_from_intervals(Vec2 x, Vec2 y, Vec2 z) {
 }
 
 [[nodiscard]] AABB
-make_aabb_from_extremas(Vec3 a, Vec3 b) {
+make_aabb_from_extremes(Vec3 a, Vec3 b) {
   return {
       .x = {.min = ::fmin(a.x, b.x), .max = ::fmax(a.x, b.x)},
       .y = {.min = ::fmin(a.y, b.y), .max = ::fmax(a.y, b.y)},

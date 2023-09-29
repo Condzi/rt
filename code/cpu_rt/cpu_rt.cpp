@@ -23,7 +23,7 @@ make_sphere(Vec3 center, f32 r) {
 
   return {.center   = center,
           .radius   = r,
-          .aabb     = make_aabb_from_extremas(aabb_min, aabb_max),
+          .aabb     = make_aabb_from_extremes(aabb_min, aabb_max),
           .material = NULL};
 }
 
