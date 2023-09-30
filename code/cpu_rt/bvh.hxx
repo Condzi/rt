@@ -1,5 +1,5 @@
 /**
- * BVH - bouding volume hiearchy. Data structure used for optimizing ray-object
+ * BVH - bounding volume hierarchy. Data structure used for optimizing ray-object
  * intersections.
  * It works by grouping bounding volumes, from smallest to the largest (scene).
  */
