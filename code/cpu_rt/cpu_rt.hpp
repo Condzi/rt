@@ -28,3 +28,4 @@ do_ray_tracing();
 #include "shapes.hxx"
 #include "materials.hxx"
 #include "bvh.hxx"
+#include "world.hxx"
