@@ -6,9 +6,11 @@ struct World {
   AABB    aabb;
 };
 
-void
-add_sphere(World &w, Sphere s, Material *mat);
+enum World_Type { WorldType_Book1Final = 0, WorldType_Test };
 
 [[nodiscard]] World
-random_scene();
+create_world(World_Type type);
+
+void
+add_sphere(World &w, Sphere s, Material *mat);
 } // namespace rt

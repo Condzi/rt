@@ -194,13 +194,13 @@ do_ray_tracing() {
   f32 const  dist_to_focus = 10.0f;
   f32 const  aperture      = 0.1f;
 
-  // Static so it doesnt go out of stack
+  // Static so it doesn't go out of scope
   static Camera cam = make_camera(
       lookfrom, lookat, vup, 20.0f, aspect_ratio, aperture, dist_to_focus);
 
   // World
-  // Static so it doesnt go out of stack
-  static World w = random_scene();
+  // Static so it doesn't go out of scope
+  static World w        = create_world(WorldType_Book1Final);
   BVH_Node    *bvh_root = make_BVH(w.spheres, 0, w.num_spheres, w.aabb);
 
   // Render

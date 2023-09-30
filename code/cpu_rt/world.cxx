@@ -1,5 +1,22 @@
 namespace rt {
 
+[[nodiscard]] World
+world_book1();
+
+[[nodiscard]] World
+create_world(World_Type type) {
+  switch (type) {
+    case WorldType_Book1Final:
+      return world_book1();
+    case WorldType_Test:
+      return World {}; // @ToDo
+    default:
+      assert(false);
+  }
+
+  return {};
+}
+
 void
 add_sphere(World &w, Sphere s, Material *mat) {
   assert(w.num_spheres < w.num_spheres_reserved);
@@ -11,7 +28,7 @@ add_sphere(World &w, Sphere s, Material *mat) {
 }
 
 [[nodiscard]] World
-random_scene() {
+world_book1() {
   World w;
   w.num_spheres          = 0;
   w.aabb                 = AABB {};
