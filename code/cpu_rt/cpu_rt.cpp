@@ -238,19 +238,22 @@ do_ray_tracing() {
   s32 const image_height = (s32)(image_width / aspect_ratio);
 
   // Camera setup
-  Vec3 const lookfrom {13, 2, 3};
+  // Vec3 const lookfrom {13, 2, 3};
   Vec3 const lookat {0, 0, 0};
   Vec3 const vup {0, 1, 0};
+  //  f32 const  vfov          = 20.0f;
+  Vec3 const lookfrom {0, 0, 9};
+  f32 const  vfov          = 80.0f;
   f32 const  dist_to_focus = 10.0f;
   f32 const  aperture      = 0.1f;
 
   // Static so it doesn't go out of scope
-  static Camera cam = make_camera(
-      lookfrom, lookat, vup, 20.0f, aspect_ratio, aperture, dist_to_focus);
+  static Camera cam =
+      make_camera(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus);
 
   // World
   // Static so it doesn't go out of scope
-  static World w        = create_world(WorldType_Book1Final);
+  static World w = create_world(WorldType_Quads);
   // Generate list of BVH_Input based on object IDs.
   //
   std::vector<BVH_Input> bvh_input;

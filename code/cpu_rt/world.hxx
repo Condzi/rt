@@ -9,11 +9,14 @@ struct World {
   AABB    aabb;
 };
 
-enum World_Type { WorldType_Book1Final = 0, WorldType_Test };
+enum World_Type { WorldType_Book1Final = 0, WorldType_Quads };
 
 [[nodiscard]] World
 create_world(World_Type type);
 
 void
 add_sphere(World &w, Sphere s, Material *mat);
+
+void
+add_quad(World &w, Quad q, Material *mat);
 } // namespace rt

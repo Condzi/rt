@@ -4,12 +4,15 @@ namespace rt {
 world_book1();
 
 [[nodiscard]] World
+world_quads();
+
+[[nodiscard]] World
 create_world(World_Type type) {
   switch (type) {
     case WorldType_Book1Final:
       return world_book1();
-    case WorldType_Test:
-      return World {}; // @ToDo
+    case WorldType_Quads:
+      return world_quads();
     default:
       assert(false);
   }
@@ -20,11 +23,23 @@ create_world(World_Type type) {
 void
 add_sphere(World &w, Sphere s, Material *mat) {
   assert(w.num_spheres < w.num_spheres_reserved);
+  assert(mat);
 
   s32 const idx           = w.num_spheres++;
   w.spheres[idx]          = s;
   w.spheres[idx].material = mat;
   w.aabb                  = make_aabb_from_aabbs(w.aabb, s.aabb);
+}
+
+void
+add_quad(World &w, Quad q, Material *mat) {
+  assert(w.num_quads < w.num_quads_reserved);
+  assert(mat);
+
+  s32 const idx         = w.num_quads++;
+  w.quads[idx]          = q;
+  w.quads[idx].material = mat;
+  w.aabb                = make_aabb_from_aabbs(w.aabb, q.aabb);
 }
 
 [[nodiscard]] World
@@ -92,6 +107,33 @@ world_book1() {
   add_sphere(w, make_sphere(Vec3 {4, 1, 0}, 1.0), mat3);
 
   logf("%d/%d spheres generated.\n", w.num_spheres, w.num_spheres_reserved);
+
+  return w;
+}
+
+[[nodiscard]] World
+world_quads() {
+  World w              = {0};
+  w.num_quads_reserved = 5;
+  w.quads              = (Quad *)alloc_perm(sizeof(Quad) * w.num_quads_reserved);
+
+  Lambertian *red    = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  Lambertian *green  = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  Lambertian *blue   = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  Lambertian *orange = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  Lambertian *teal   = (Lambertian *)alloc_perm(sizeof(Lambertian));
+
+  new (red) Lambertian {Vec3 {1.0f, 0.2f, 0.2f}};
+  new (green) Lambertian {Vec3 {0.2f, 1.0f, 0.2f}};
+  new (blue) Lambertian {Vec3 {0.2f, 0.2f, 1.0f}};
+  new (orange) Lambertian {Vec3 {1.0f, 0.5f, 0.0f}};
+  new (teal) Lambertian {Vec3 {0.2f, 0.8f, 0.8f}};
+
+  add_quad(w, make_quad({-3, -2, 5}, {0, 0, -4}, {0, 4, 0}), red);
+  add_quad(w, make_quad({-2, -2, 0}, {4, 0, 0}, {0, 4, 0}), green);
+  add_quad(w, make_quad({3, -2, 1}, {0, 0, 4}, {0, 4, 0}), blue);
+  add_quad(w, make_quad({-2, 3, 1}, {4, 0, 0}, {0, 0, 4}), orange);
+  add_quad(w, make_quad({-2, -3, 5}, {4, 0, 0}, {0, 0, -4}), teal);
 
   return w;
 }
