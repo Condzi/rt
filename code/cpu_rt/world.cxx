@@ -30,6 +30,8 @@ add_sphere(World &w, Sphere s, Material *mat) {
 [[nodiscard]] World
 world_book1() {
   World w;
+  w.num_quads = w.num_quads_reserved = 0;
+  w.quads                            = 0;
   w.num_spheres          = 0;
   w.aabb                 = AABB {};
   w.num_spheres_reserved = 22 * 22 + 2;

@@ -7,6 +7,19 @@ struct Rt_Output {
   std::atomic_bool *thread_flags; // true if thread finished
 };
 
+enum Object_Type : u8 { ObjectType_None = 0, ObjectType_Sphere, ObjectType_Quad };
+
+// @Note: maybe pack it into 32 bits?
+union Object_ID {
+  struct {
+    u32         idx;
+    Object_Type type;
+  };
+  u64 i;
+};
+
+Object_ID constexpr static INVALID_OBJECT_ID {.i = 0};
+
 // Ray can be thought of as a function:
 //  P(t) = A + t*B
 struct Ray {

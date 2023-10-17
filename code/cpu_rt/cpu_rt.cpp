@@ -98,21 +98,70 @@ hit_quad(Ray const &r, Quad const &q, f32 t_min, f32 t_max, Hit_Info &hi) {
   return true;
 }
 
+// Returns true if there was a contact with at least one object
+//
+[[nodiscard]] bool
+check_possible_contacts_for_collision(World const           &world,
+                                      std::vector<Object_ID> contacts,
+                                      Ray const             &r,
+                                      Vec2                   t,
+                                      Hit_Info              &hi) {
+  // Sort by object type in order to help the CPU prefetcher
+  //
+  std::sort(contacts.begin(),
+            contacts.end(),
+            [](Object_ID const &a, Object_ID const &b) { return a.type < b.type; });
+
+  bool any_hit = false;
+  for (auto const &obj : contacts) {
+    bool hit = false;
+    switch (obj.type) {
+      case ObjectType_Sphere: {
+        Sphere const &s = world.spheres[obj.idx];
+        hit             = hit_sphere(r, s, t.min, t.max, hi);
+      } break;
+
+      case ObjectType_Quad: {
+        Quad const &q = world.quads[obj.idx];
+        hit           = hit_quad(r, q, t.min, t.max, hi);
+      } break;
+
+      default: {
+        // Unknown object!
+        assert(false);
+      }
+    }
+
+    if (hit) {
+      any_hit = true;
+      // We need to update how far the ray reaches.
+      //
+      t.max = hi.t;
+    }
+  }
+
+  return any_hit;
+}
+
 // @Hot
 [[nodiscard]] Vec3
-ray_color(Ray const &r, BVH_Node *const root, s32 depth) {
+ray_color(World const &world, Ray const &r, BVH_Node *const root, s32 depth) {
   if (depth == 0) {
     return Vec3 {0, 0, 0};
   }
 
   Hit_Info hi;
+  // Broad-phase collision detection
   // @Note: 0.001 instead 0 fixes shadow acne
-  if (hit_BVH(root, r, {.min = 0.001f, .max = FLT_MAX}, hi)) {
+  std::vector<Object_ID> contacts = hit_BVH(root, r);
+  // Narrow-phase collision detection
+  if (check_possible_contacts_for_collision(
+          world, contacts, r, {.min = 0.001f, .max = FLT_MAX}, hi)) {
     Ray  scattered;
     Vec3 attenuated_color;
 
     if (hi.material->scatter(r, hi, attenuated_color, scattered)) {
-      return attenuated_color * ray_color(scattered, root, depth - 1);
+      return attenuated_color * ray_color(world, scattered, root, depth - 1);
     } else {
       return Vec3 {0, 0, 0};
     }
@@ -150,7 +199,8 @@ rt_loop_balanced(s32               max_row,
                  u8               *buffer,
                  BVH_Node         *bvh_root,
                  Camera           &cam,
-                 std::atomic_bool &thread_flag) {
+                 std::atomic_bool &thread_flag,
+                 World const      &world) {
   while (true) {
     s32 j = get_next_row(max_row);
     if (j == -1) break;
@@ -162,7 +212,7 @@ rt_loop_balanced(s32               max_row,
         auto v = (f32(j) + random_f32()) / (image_height - 1);
 
         Ray r       = get_ray_at(cam, u, v);
-        pixel_color = pixel_color + ray_color(r, bvh_root, MAX_DEPTH);
+        pixel_color = pixel_color + ray_color(world, r, bvh_root, MAX_DEPTH);
       }
 
       pixel_color = pixel_color * COLOR_SCALE;
@@ -201,7 +251,20 @@ do_ray_tracing() {
   // World
   // Static so it doesn't go out of scope
   static World w        = create_world(WorldType_Book1Final);
-  BVH_Node    *bvh_root = make_BVH(w.spheres, 0, w.num_spheres, w.aabb);
+  // Generate list of BVH_Input based on object IDs.
+  //
+  std::vector<BVH_Input> bvh_input;
+  bvh_input.reserve(w.num_spheres + w.num_quads);
+  for (s32 i = 0; i < w.num_spheres; i++) {
+    Object_ID id {.idx = (u32)i, .type = ObjectType_Sphere};
+    bvh_input.emplace_back(id, w.spheres[i].aabb);
+  }
+  for (s32 i = 0; i < w.num_quads; i++) {
+    Object_ID id {.idx = (u32)i, .type = ObjectType_Quad};
+    bvh_input.emplace_back(id, w.quads[i].aabb);
+  }
+
+  BVH_Node *bvh_root = make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
 
   // Render
 
@@ -219,7 +282,8 @@ do_ray_tracing() {
                        buffer,
                        bvh_root,
                        cam,
-                       thread_flags[i]);
+                       thread_flags[i],
+                       w);
     }).detach();
   }
 

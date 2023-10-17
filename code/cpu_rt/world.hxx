@@ -3,6 +3,9 @@ struct World {
   Sphere *spheres;
   s32     num_spheres_reserved;
   s32     num_spheres;
+  Quad   *quads;
+  s32     num_quads_reserved;
+  s32     num_quads;
   AABB    aabb;
 };
 
