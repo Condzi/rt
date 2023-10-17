@@ -9,7 +9,7 @@ struct World {
   AABB    aabb;
 };
 
-enum World_Type { WorldType_Book1Final = 0, WorldType_Quads };
+enum World_Type { WorldType_Book1Final = 0, WorldType_Quads, WorldType_SimpleLights };
 
 [[nodiscard]] World
 create_world(World_Type type);

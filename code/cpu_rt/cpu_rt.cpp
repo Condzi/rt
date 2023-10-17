@@ -146,38 +146,46 @@ check_possible_contacts_for_collision(World const           &world,
 // @Hot
 [[nodiscard]] Vec3
 ray_color(World const &world, Ray const &r, BVH_Node *const root, s32 depth) {
+  // We exceeded ray bounce limit -- no more light is gathered.
+  //
   if (depth == 0) {
     return Vec3 {0, 0, 0};
   }
 
+  Vec3 const background_color {0.5, 0.7, 1.0};
+
   Hit_Info hi;
   // Broad-phase collision detection
   // @Note: 0.001 instead 0 fixes shadow acne
+  //
   std::vector<Object_ID> contacts = hit_BVH(root, r);
   // Narrow-phase collision detection
-  if (check_possible_contacts_for_collision(
+  // No hit -- return background color.
+  //
+  if (!check_possible_contacts_for_collision(
           world, contacts, r, {.min = 0.001f, .max = FLT_MAX}, hi)) {
-    Ray  scattered;
-    Vec3 attenuated_color;
 
-    if (hi.material->scatter(r, hi, attenuated_color, scattered)) {
-      return attenuated_color * ray_color(world, scattered, root, depth - 1);
-    } else {
-      return Vec3 {0, 0, 0};
-    }
+    return background_color;
   }
 
-  Vec3  dir    = normalized(r.direction);
-  float t      = 0.5f * (dir.y + 1.0f);
-  f32   scalar = 1 - t;
+  Ray  scattered;
+  Vec3 attenuated_color;
+  // @Note: we don't support textures yet, so we emit a solid color.
+  Vec3 emission = hi.material->emitted();
 
-  Vec3 color = Vec3 {1, 1, 1} * scalar + Vec3 {0.5, 0.7, 1.0} * t;
-  return color;
+  if (!hi.material->scatter(r, hi, attenuated_color, scattered)) {
+    return emission;
+  }
+
+  Vec3 color_from_scatter =
+      attenuated_color * ray_color(world, scattered, root, depth - 1);
+
+  return emission + color_from_scatter;
 }
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 500; // 500
+s32 const SAMPLES_PER_PIXEL = 100; // 500
 // @todo: move to ui
 s32 const MAX_DEPTH = 50; // 50
 
@@ -239,12 +247,14 @@ do_ray_tracing() {
 
   // Camera setup
   // Vec3 const lookfrom {13, 2, 3};
-  Vec3 const lookat {0, 0, 0};
+  // Vec3 const lookat {0, 0, 0};
+  Vec3 const lookat {0, 2, 0};
   Vec3 const vup {0, 1, 0};
-  //  f32 const  vfov          = 20.0f;
-  Vec3 const lookfrom {0, 0, 9};
-  f32 const  vfov          = 80.0f;
-  f32 const  dist_to_focus = 10.0f;
+  f32 const  vfov = 20.0f;
+  // Vec3 const lookfrom {0, 0, 9};
+  Vec3 const lookfrom {26, 3, 6};
+  // f32 const  vfov          = 80.0f;
+  f32 const  dist_to_focus = 15.0f;
   f32 const  aperture      = 0.1f;
 
   // Static so it doesn't go out of scope
@@ -253,7 +263,7 @@ do_ray_tracing() {
 
   // World
   // Static so it doesn't go out of scope
-  static World w = create_world(WorldType_Quads);
+  static World w = create_world(WorldType_SimpleLights);
   // Generate list of BVH_Input based on object IDs.
   //
   std::vector<BVH_Input> bvh_input;

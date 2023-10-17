@@ -7,12 +7,17 @@ world_book1();
 world_quads();
 
 [[nodiscard]] World
+world_simple_lights();
+
+[[nodiscard]] World
 create_world(World_Type type) {
   switch (type) {
     case WorldType_Book1Final:
       return world_book1();
     case WorldType_Quads:
       return world_quads();
+    case WorldType_SimpleLights:
+      return world_simple_lights();
     default:
       assert(false);
   }
@@ -134,6 +139,30 @@ world_quads() {
   add_quad(w, make_quad({3, -2, 1}, {0, 0, 4}, {0, 4, 0}), blue);
   add_quad(w, make_quad({-2, 3, 1}, {4, 0, 0}, {0, 0, 4}), orange);
   add_quad(w, make_quad({-2, -3, 5}, {4, 0, 0}, {0, 0, -4}), teal);
+
+  return w;
+}
+
+[[nodiscard]] World
+world_simple_lights() {
+  World w                = {0};
+  w.num_spheres_reserved = 3;
+  w.num_quads_reserved   = 1;
+  w.quads                = (Quad *)alloc_perm(sizeof(Quad) * w.num_quads_reserved);
+  w.spheres = (Sphere *)alloc_perm(sizeof(Sphere) * w.num_spheres_reserved);
+
+  Lambertian    *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  Lambertian    *green           = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  Diffuse_Light *light           = (Diffuse_Light *)alloc_perm(sizeof(Diffuse_Light));
+
+  new (ground_material) Lambertian {Vec3 {1.0, 0.5, 0.5}};
+  new (green) Lambertian {Vec3 {0.2f, 1.0f, 0.2f}};
+  new (light) Diffuse_Light(Vec3 {10, 10, 10});
+
+  add_sphere(w, make_sphere(Vec3 {0, -1000, 0}, 1000), ground_material);
+  add_sphere(w, make_sphere(Vec3 {0, 2, 0}, 2), green);
+  add_sphere(w, make_sphere({0, 7, 0}, 2), light);
+  add_quad(w, make_quad({3, 1, -2}, {2, 0, 0}, {0, 2, 0}), light);
 
   return w;
 }

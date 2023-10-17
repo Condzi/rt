@@ -8,6 +8,11 @@ struct Material {
   // Calculates the new color and ray.
   virtual bool
   scatter(Ray const &in, Hit_Info const &hi, Vec3 &attenuation_color, Ray &out) = 0;
+
+  virtual Vec3
+  emitted() {
+    return {0, 0, 0};
+  }
 };
 
 struct Lambertian : Material {
@@ -45,5 +50,20 @@ struct Dielectric : Material {
           Hit_Info const &hi,
           Vec3           &attenuation_color,
           Ray            &out) override;
+};
+
+struct Diffuse_Light : Material {
+  Vec3 color;
+  Diffuse_Light(Vec3 col_) : color(col_) {};
+
+  bool
+  scatter(Ray const &, Hit_Info const &, Vec3 &, Ray &) {
+    return false;
+  }
+
+  virtual Vec3
+  emitted() {
+    return color;
+  }
 };
 } // namespace rt
