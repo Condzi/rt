@@ -10,19 +10,16 @@ find_longest_axis(AABB const &a) {
   return 2;
 }
 
-// aka number of spheres per leaf
-// @Note: 8 beacuse AVX2.
+// aka number of objects per leaf
+//
 s32 constexpr static LEAF_WIDTH = 8;
-struct Sphere_Pack {
-  alignas(32) f32 center_x[LEAF_WIDTH];
-  alignas(32) f32 center_y[LEAF_WIDTH];
-  alignas(32) f32 center_z[LEAF_WIDTH];
-  alignas(32) f32 radius[LEAF_WIDTH];
-
-  Sphere unpacked[LEAF_WIDTH];
+struct Object_Pack {
+  Object_ID unpacked[LEAF_WIDTH];
 };
 
-static std::unordered_map<BVH_Node *, Sphere_Pack> leaf_to_sphere_pack;
+// Shared among all threads -- may cause slowness because of cache
+// synchronization?
+static std::unordered_map<BVH_Node *, Object_Pack> leaf_to_object_pack;
 
 s32 constexpr static NUM_BINS      = 12;
 s32 constexpr static BIN_NOT_FOUND = -1;
@@ -33,7 +30,7 @@ struct BVH_Bin {
 };
 
 [[nodiscard]] s32
-find_best_axis_using_SAH(Sphere     *spheres,
+find_best_axis_using_SAH(BVH_Input  *input,
                          s32         begin,
                          s32         end,
                          AABB const &parent_aabb) {
@@ -47,16 +44,16 @@ find_best_axis_using_SAH(Sphere     *spheres,
 
     // Populate the bins
     for (s32 i = begin; i < end; i++) {
-      Vec2 const &sphere_axis      = spheres[i].aabb.v[axis];
+      Vec2 const &current_aab_axis = input[i].aabb.v[axis];
       Vec2 const &parent_aabb_axis = parent_aabb.v[axis];
 
-      f32 const t = (sphere_axis.min - parent_aabb_axis.min) /
+      f32 const t = (current_aab_axis.min - parent_aabb_axis.min) /
                     (parent_aabb_axis.max - parent_aabb_axis.min);
 
       s32 const bin_idx = std::min(NUM_BINS - 1, (s32)(t * NUM_BINS));
 
       bins[bin_idx].size++;
-      bins[bin_idx].aabb = make_aabb_from_aabbs(bins[bin_idx].aabb, spheres[i].aabb);
+      bins[bin_idx].aabb = make_aabb_from_aabbs(bins[bin_idx].aabb, input[i].aabb);
     }
 
     // Calculate SAH for each bin boundary along this axis
@@ -95,11 +92,11 @@ static s32 best_bin_not_found = 0;
 static s32 empty_slots        = 0;
 
 [[nodiscard]] BVH_Node *
-make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
+make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb) {
   // s32 const axis = find_longest_axis(parent_aabb);
-  s32 const axis = find_best_axis_using_SAH(spheres, begin, end, parent_aabb);
+  s32 const axis = find_best_axis_using_SAH(input, begin, end, parent_aabb);
 
-  auto comparator = [axis](Sphere const &a, Sphere const &b) {
+  auto comparator = [axis](BVH_Input const &a, BVH_Input const &b) {
     return a.aabb.v[axis].min < b.aabb.v[axis].min;
   };
 
@@ -109,36 +106,29 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   s32 const object_span = end - begin;
   // leaves CREATION {
   if (object_span <= LEAF_WIDTH) {
-    Sphere_Pack leaf_data;
+    Object_Pack leaf_data;
     // Firstly, populate with invalid boxes
-    Sphere const &s0 = spheres[begin];
+    BVH_Input const &s0 = input[begin];
     for (s32 i = 0; i < LEAF_WIDTH; i++) {
-      leaf_data.center_x[i] = 0;
-      leaf_data.center_y[i] = 0;
-      leaf_data.center_z[i] = 0;
-      leaf_data.radius[i]   = 0;
-      leaf_data.unpacked[i] = s0;
+      leaf_data.unpacked[i] = s0.id;
     }
 
     AABB aabb;
     empty_slots += 8 - object_span;
     for (s32 i = begin; i < end; i++) {
-      Sphere const &s_i = spheres[i];
+      BVH_Input const &s_i = input[i];
 
-      leaf_data.center_x[i - begin] = s_i.center.x;
-      leaf_data.center_y[i - begin] = s_i.center.y;
-      leaf_data.center_z[i - begin] = s_i.center.z;
-      leaf_data.radius[i - begin]   = s_i.radius;
-      leaf_data.unpacked[i - begin] = s_i;
-
+      leaf_data.unpacked[i - begin] = s_i.id;
       aabb = make_aabb_from_aabbs(aabb, s_i.aabb);
     }
 
-    // Leaf case (one object) - both children are NULL and the payload is a sphere.
+    // Leaf case (one object) - both children are NULL and the payload is an object
+    // pack.
+    //
     root->left           = NULL;
     root->right          = NULL;
-    root->aabb           = aabb; // is this aabb ok?
-    leaf_to_sphere_pack[root] = leaf_data;
+    root->aabb                = aabb;
+    leaf_to_object_pack[root] = leaf_data;
 
     return root;
   }
@@ -148,16 +138,16 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   BVH_Bin bins[NUM_BINS] = {};
   // Populate the bins
   for (s32 i = begin; i < end; i++) {
-    Vec2 const &sphere_axis      = spheres[i].aabb.v[axis];
+    Vec2 const &current_aab_axis = input[i].aabb.v[axis];
     Vec2 const &parent_aabb_axis = parent_aabb.v[axis];
 
-    f32 const t = (sphere_axis.min - parent_aabb_axis.min) /
+    f32 const t = (current_aab_axis.min - parent_aabb_axis.min) /
                   (parent_aabb_axis.max - parent_aabb_axis.min);
 
     s32 const bin_idx = std::min(NUM_BINS - 1, (s32)(t * NUM_BINS));
 
     bins[bin_idx].size++;
-    bins[bin_idx].aabb = make_aabb_from_aabbs(bins[bin_idx].aabb, spheres[i].aabb);
+    bins[bin_idx].aabb = make_aabb_from_aabbs(bins[bin_idx].aabb, input[i].aabb);
   }
 
   // Find the best splitting idx
@@ -200,14 +190,14 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
         parent_aabb_axis.min +
         (best_bin + 1) * (parent_aabb_axis.max - parent_aabb_axis.min) / NUM_BINS;
 
-    auto const binning_comparator = [axis, split_value](Sphere const &s) {
+    auto const binning_comparator = [axis, split_value](BVH_Input const &s) {
       return s.aabb.v[axis].min < split_value;
     };
 
-    mid = (s32)(std::partition(spheres + begin, spheres + end, binning_comparator) -
-                spheres);
+    mid =
+        (s32)(std::partition(input + begin, input + end, binning_comparator) - input);
 
-    // All spheres fell into one bin - it's not a valid split!
+    // All input fell into one bin - it's not a valid split!
     if (mid == begin || mid == end) {
       best_bin = BIN_NOT_FOUND;
     } else {
@@ -218,22 +208,22 @@ make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb) {
   // Fallback to median split if bin split is not correct
   if (best_bin == BIN_NOT_FOUND) {
     best_bin_not_found++;
-    std::sort(spheres + begin, spheres + end, comparator);
+    std::sort(input + begin, input + end, comparator);
 
     mid = begin + object_span / 2;
   }
   // Precalculate AABBs
   AABB left_aabb, right_aabb;
   for (s32 i = begin; i < mid; i++) {
-    left_aabb = make_aabb_from_aabbs(left_aabb, spheres[i].aabb);
+    left_aabb = make_aabb_from_aabbs(left_aabb, input[i].aabb);
   }
 
   for (s32 i = mid; i < end; i++) {
-    right_aabb = make_aabb_from_aabbs(right_aabb, spheres[i].aabb);
+    right_aabb = make_aabb_from_aabbs(right_aabb, input[i].aabb);
   }
 
-  root->left  = make_BVH(spheres, begin, mid, left_aabb);
-  root->right = make_BVH(spheres, mid, end, right_aabb);
+  root->left  = make_BVH(input, begin, mid, left_aabb);
+  root->right = make_BVH(input, mid, end, right_aabb);
 
   /*
     logf("best_bin_found=%d \t best_bin_not_found=%d\n",
@@ -264,68 +254,21 @@ hit_BVH_internal(BVH_Node *root, Vec3 const &ray_origin, Vec3 const &ray_inv_dir
   hit_BVH_internal(root->right, ray_origin, ray_inv_dir);
 }
 
-[[nodiscard]] u32
-discriminant_check(Ray const &r, Sphere_Pack const &s_pack) {
-  // Load packed sphere data into AVX2 registers
-  __m256 center_x = _mm256_loadu_ps(s_pack.center_x);
-  __m256 center_y = _mm256_loadu_ps(s_pack.center_y);
-  __m256 center_z = _mm256_loadu_ps(s_pack.center_z);
-  __m256 radius   = _mm256_loadu_ps(s_pack.radius);
-
-  // Calculate oc = r.origin - s.center for each packed sphere
-  __m256 oc_x = _mm256_sub_ps(_mm256_set1_ps(r.origin.x), center_x);
-  __m256 oc_y = _mm256_sub_ps(_mm256_set1_ps(r.origin.y), center_y);
-  __m256 oc_z = _mm256_sub_ps(_mm256_set1_ps(r.origin.z), center_z);
-
-  // Calculate a, half_b, and c for each packed sphere
-  __m256 a =
-      _mm256_set1_ps(r.direction.x * r.direction.x + r.direction.y * r.direction.y +
-                     r.direction.z * r.direction.z);
-  __m256 half_b =
-      _mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(oc_x, _mm256_set1_ps(r.direction.x)),
-                                  _mm256_mul_ps(oc_y, _mm256_set1_ps(r.direction.y))),
-                    _mm256_mul_ps(oc_z, _mm256_set1_ps(r.direction.z)));
-  __m256 c = _mm256_sub_ps(_mm256_add_ps(_mm256_add_ps(_mm256_mul_ps(oc_x, oc_x),
-                                                       _mm256_mul_ps(oc_y, oc_y)),
-                                         _mm256_mul_ps(oc_z, oc_z)),
-                           _mm256_mul_ps(radius, radius));
-
-  // Calculate the discriminant for each packed sphere
-  __m256 discriminant =
-      _mm256_sub_ps(_mm256_mul_ps(half_b, half_b), _mm256_mul_ps(a, c));
-
-  // Check if any discriminant is >= 0
-  __m256 mask = _mm256_cmp_ps(discriminant, _mm256_setzero_ps(), _CMP_GE_OQ);
-
-  u32 mask_val = (u32)_mm256_movemask_ps(mask);
-  return mask_val;
-}
-
-[[nodiscard]] bool
-hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi) {
+[[nodiscard]] std::vector<Object_ID>
+hit_BVH(BVH_Node *root, Ray const &ray) {
   candidates.reserve(128);
   candidates.clear();
 
   hit_BVH_internal(root, ray.origin, ray.direction_inv);
 
-  bool any_hit = false;
-
+  std::vector<Object_ID> result;
+  result.reserve(candidates.size() * LEAF_WIDTH);
   for (BVH_Node *node : candidates) {
-    auto const &pack = leaf_to_sphere_pack[node];
-
-    // Eliminate some of the 8 spheres early on
-    u32 hit_mask = discriminant_check(ray, pack);
-    for (s32 i = 0; i < 8; i++) {
-      if (hit_mask & (1 << i)) {
-        if (hit_sphere(ray, pack.unpacked[i], t.min, t.max, hi)) {
-          t.max   = hi.t;
-          any_hit = true;
-        }
-      }
-    }
+    auto const &pack = leaf_to_object_pack[node];
+    std::copy(pack.unpacked, pack.unpacked + LEAF_WIDTH, std::back_inserter(result));
   }
 
-  return any_hit;
+  return result;
 }
 
 } // namespace rt

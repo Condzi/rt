@@ -7,17 +7,16 @@ Estimated time: ~4 Months: June - October.
 - [X] ImGui
 
 Start with the Compute Shaders? What are the downsides of Coding Adventure & 
-Raytraycing in One Weekeend? Can I combine them somehow to get something better?
+Ray Tracing in One Weekend? Can I combine them somehow to get something better?
 
-# July - Prototyping
-# August - Prototyping, porting to compute shaders?
 # September 
 - [X] Balls rendering
 - [X] Materials
 - [X] BVH
-- [ ] Architecture refactor 
-- [ ] Textures
 - [ ] Quads
+- [ ] Architecture refactor 
+    - ubermaterial
+- [ ] Textures
 - [ ] Lights
 
 @todo: be more specific

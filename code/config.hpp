@@ -1,7 +1,7 @@
 #define RT_LOG_FILE "log.txt"
 
 namespace rt {
-char const static *WIN_NAME     = "Raytracing Engine";
+char const static *WIN_NAME     = "Ray Tracing Engine";
 char const static *WIN_CLASS    = "rt_engine";
 s64 constexpr static WIN_WIDTH  = 1366;
 s64 constexpr static WIN_HEIGHT = 768;

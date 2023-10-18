@@ -1,5 +1,5 @@
 /**
- * BVH - bouding volume hiearchy. Data structure used for optimizing ray-object
+ * BVH - bounding volume hierarchy. Data structure used for optimizing ray-object
  * intersections.
  * It works by grouping bounding volumes, from smallest to the largest (scene).
  */
@@ -11,9 +11,16 @@ struct BVH_Node {
   AABB aabb;
 };
 
-[[nodiscard]] BVH_Node *
-make_BVH(Sphere *spheres, s32 begin, s32 end, AABB const &parent_aabb);
+struct BVH_Input {
+  Object_ID id;
+  AABB      aabb;
+};
 
-[[nodiscard]] bool
-hit_BVH(BVH_Node *root, Ray const &ray, Vec2 t, Hit_Info &hi);
+[[nodiscard]] BVH_Node *
+make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb);
+
+// Returns a list of potential contacts.
+//
+[[nodiscard]] std::vector<Object_ID>
+hit_BVH(BVH_Node *root, Ray const &ray);
 } // namespace rt

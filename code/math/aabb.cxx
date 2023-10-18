@@ -5,7 +5,7 @@ make_aabb_from_intervals(Vec2 x, Vec2 y, Vec2 z) {
 }
 
 [[nodiscard]] AABB
-make_aabb_from_extremas(Vec3 a, Vec3 b) {
+make_aabb_from_extremes(Vec3 a, Vec3 b) {
   return {
       .x = {.min = ::fmin(a.x, b.x), .max = ::fmax(a.x, b.x)},
       .y = {.min = ::fmin(a.y, b.y), .max = ::fmax(a.y, b.y)},
@@ -44,5 +44,32 @@ ray_vs_aabb(Vec3 const &RT_RESTRICT ray_origin,
   }
 
   return ray_t.max >= std::max(0.0f, ray_t.min);
+}
+
+[[nodiscard]] AABB
+add_padding_if_too_narrow(AABB aabb) {
+  f32 constexpr static DT      = 0.0001f;
+  f32 constexpr static PADDING = DT / 2;
+
+  f32 const x_size = len(aabb.x);
+  f32 const y_size = len(aabb.y);
+  f32 const z_size = len(aabb.z);
+
+  if (x_size < DT) {
+    aabb.x.min -= PADDING;
+    aabb.x.max += PADDING;
+  }
+
+  if (y_size < DT) {
+    aabb.y.min -= PADDING;
+    aabb.y.max += PADDING;
+  }
+
+  if (z_size < DT) {
+    aabb.z.min -= PADDING;
+    aabb.z.max += PADDING;
+  }
+
+  return aabb;
 }
 } // namespace rt

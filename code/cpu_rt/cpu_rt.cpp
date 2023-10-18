@@ -15,35 +15,6 @@ struct Hit_Info {
   bool      front_face;
 };
 
-[[nodiscard]] Sphere
-make_sphere(Vec3 center, f32 r) {
-  Vec3 const radius_vec {.x = r, .y = r, .z = r};
-  Vec3 const aabb_min = center - radius_vec;
-  Vec3 const aabb_max = center + radius_vec;
-
-  return {.center   = center,
-          .radius   = r,
-          .aabb     = make_aabb_from_extremas(aabb_min, aabb_max),
-          .material = NULL};
-}
-
-struct World {
-  Sphere    *spheres;
-  s32        num_spheres_reserved;
-  s32        num_spheres;
-  AABB       aabb;
-};
-
-void
-add_sphere(World &w, Sphere s, Material *mat) {
-  assert(w.num_spheres < w.num_spheres_reserved);
-
-  s32 const idx           = w.num_spheres++;
-  w.spheres[idx]          = s;
-  w.spheres[idx].material = mat;
-  w.aabb                  = make_aabb_from_aabbs(w.aabb, s.aabb);
-}
-
 [[nodiscard]] Vec3
 at(Ray const &r, f32 t) {
   return r.origin + r.direction * t;
@@ -87,40 +58,134 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   return true;
 }
 
+// 1. finding the plane that contains that quad,
+// 2. solving for the intersection of a ray and the quad-containing plane,
+// 3. determining if the hit point lies inside the quad.
+[[nodiscard]] bool
+hit_quad(Ray const &r, Quad const &q, f32 t_min, f32 t_max, Hit_Info &hi) {
+  f32 const denom = dot(q.normal, r.direction);
+
+  // Ray is parallel to the plane
+  if (::fabs(denom) < 1e-8) {
+    return false;
+  }
+
+  // Intersection point is outside the ray interval
+  f32 const t = (q.D - dot(q.normal, r.origin)) / denom;
+  if (t < t_min || t > t_max) {
+    return false;
+  }
+
+  Vec3 const intersection_point = at(r, t);
+  // Determine the hit point lies within the planar shape using its plane coordinates.
+
+  Vec3 const planar_hitpt_vector = intersection_point - q.Q;
+  f32 const  alpha               = dot(q.w, cross(planar_hitpt_vector, q.v));
+  f32 const  beta                = dot(q.w, cross(q.u, planar_hitpt_vector));
+
+  // Check if we're inside the (0, 1) range
+  if ((alpha < 0 || alpha > 1) || (beta < 0 || beta > 1)) {
+    return false;
+  }
+
+  // Ray hits the 2D shape; set the hit record and return true.
+  hi.t          = t;
+  hi.p          = intersection_point;
+  hi.material   = q.material;
+  hi.front_face = (dot(r.direction, q.normal) < 0);
+  hi.normal     = q.normal * (hi.front_face ? 1.f : -1.f);
+
+  return true;
+}
+
+// Returns true if there was a contact with at least one object
+//
+[[nodiscard]] bool
+check_possible_contacts_for_collision(World const           &world,
+                                      std::vector<Object_ID> contacts,
+                                      Ray const             &r,
+                                      Vec2                   t,
+                                      Hit_Info              &hi) {
+  // Sort by object type in order to help the CPU prefetcher
+  //
+  std::sort(contacts.begin(),
+            contacts.end(),
+            [](Object_ID const &a, Object_ID const &b) { return a.type < b.type; });
+
+  bool any_hit = false;
+  for (auto const &obj : contacts) {
+    bool hit = false;
+    switch (obj.type) {
+      case ObjectType_Sphere: {
+        Sphere const &s = world.spheres[obj.idx];
+        hit             = hit_sphere(r, s, t.min, t.max, hi);
+      } break;
+
+      case ObjectType_Quad: {
+        Quad const &q = world.quads[obj.idx];
+        hit           = hit_quad(r, q, t.min, t.max, hi);
+      } break;
+
+      default: {
+        // Unknown object!
+        assert(false);
+      }
+    }
+
+    if (hit) {
+      any_hit = true;
+      // We need to update how far the ray reaches.
+      //
+      t.max = hi.t;
+    }
+  }
+
+  return any_hit;
+}
+
 // @Hot
 [[nodiscard]] Vec3
-ray_color(Ray const &r, BVH_Node *const root, s32 depth) {
+ray_color(World const &world, Ray const &r, BVH_Node *const root, s32 depth) {
+  // We exceeded ray bounce limit -- no more light is gathered.
+  //
   if (depth == 0) {
     return Vec3 {0, 0, 0};
   }
 
-  Hit_Info hi;
-  // @Note: 0.001 instead 0 fixes shadow acne
-  if (hit_BVH(root, r, {.min = 0.001f, .max = FLT_MAX}, hi)) {
-    Ray  scattered;
-    Vec3 attenuated_color;
+  Vec3 const background_color {0.5, 0.7, 1.0};
 
-    if (hi.material->scatter(r, hi, attenuated_color, scattered)) {
-      return attenuated_color * ray_color(scattered, root, depth - 1);
-    } else {
-      return Vec3 {0, 0, 0};
-    }
+  Hit_Info hi;
+  // Broad-phase collision detection
+  // @Note: 0.001 instead 0 fixes shadow acne
+  //
+  std::vector<Object_ID> contacts = hit_BVH(root, r);
+  // Narrow-phase collision detection
+  // No hit -- return background color.
+  //
+  if (!check_possible_contacts_for_collision(
+          world, contacts, r, {.min = 0.001f, .max = FLT_MAX}, hi)) {
+
+    return background_color;
   }
 
-  Vec3  dir    = normalized(r.direction);
-  float t      = 0.5f * (dir.y + 1.0f);
-  f32   scalar = 1 - t;
+  Ray  scattered;
+  Vec3 attenuated_color;
+  // @Note: we don't support textures yet, so we emit a solid color.
+  Vec3 emission = hi.material->emitted();
 
-  Vec3 color = Vec3 {1, 1, 1} * scalar + Vec3 {0.5, 0.7, 1.0} * t;
-  return color;
+  if (!hi.material->scatter(r, hi, attenuated_color, scattered)) {
+    return emission;
+  }
+
+  Vec3 color_from_scatter =
+      attenuated_color * ray_color(world, scattered, root, depth - 1);
+
+  return emission + color_from_scatter;
 }
-
-[[nodiscard]] World
-random_scene();
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 500; // 500
+s32 const SAMPLES_PER_PIXEL = 100; // 500
 // @todo: move to ui
 s32 const MAX_DEPTH = 50; // 50
 
@@ -142,7 +207,8 @@ rt_loop_balanced(s32               max_row,
                  u8               *buffer,
                  BVH_Node         *bvh_root,
                  Camera           &cam,
-                 std::atomic_bool &thread_flag) {
+                 std::atomic_bool &thread_flag,
+                 World const      &world) {
   while (true) {
     s32 j = get_next_row(max_row);
     if (j == -1) break;
@@ -154,7 +220,7 @@ rt_loop_balanced(s32               max_row,
         auto v = (f32(j) + random_f32()) / (image_height - 1);
 
         Ray r       = get_ray_at(cam, u, v);
-        pixel_color = pixel_color + ray_color(r, bvh_root, MAX_DEPTH);
+        pixel_color = pixel_color + ray_color(world, r, bvh_root, MAX_DEPTH);
       }
 
       pixel_color = pixel_color * COLOR_SCALE;
@@ -174,26 +240,44 @@ rt_loop_balanced(s32               max_row,
 }
 
 [[nodiscard]] Rt_Output
-do_raytraycing() {
+do_ray_tracing() {
   f32 const aspect_ratio = 3 / 2.f;
   s32 const image_width  = 1000;
   s32 const image_height = (s32)(image_width / aspect_ratio);
 
   // Camera setup
-  Vec3 const lookfrom {13, 2, 3};
-  Vec3 const lookat {0, 0, 0};
+  // Vec3 const lookfrom {13, 2, 3};
+  // Vec3 const lookat {0, 0, 0};
+  Vec3 const lookat {0, 2, 0};
   Vec3 const vup {0, 1, 0};
-  f32 const  dist_to_focus = 10.0f;
+  f32 const  vfov = 20.0f;
+  // Vec3 const lookfrom {0, 0, 9};
+  Vec3 const lookfrom {26, 3, 6};
+  // f32 const  vfov          = 80.0f;
+  f32 const  dist_to_focus = 15.0f;
   f32 const  aperture      = 0.1f;
 
-  // Static so it doesnt go out of stack
-  static Camera cam = make_camera(
-      lookfrom, lookat, vup, 20.0f, aspect_ratio, aperture, dist_to_focus);
+  // Static so it doesn't go out of scope
+  static Camera cam =
+      make_camera(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus);
 
   // World
-  // Static so it doesnt go out of stack
-  static World w = random_scene();
-  BVH_Node    *bvh_root = make_BVH(w.spheres, 0, w.num_spheres, w.aabb);
+  // Static so it doesn't go out of scope
+  static World w = create_world(WorldType_SimpleLights);
+  // Generate list of BVH_Input based on object IDs.
+  //
+  std::vector<BVH_Input> bvh_input;
+  bvh_input.reserve(w.num_spheres + w.num_quads);
+  for (s32 i = 0; i < w.num_spheres; i++) {
+    Object_ID id {.idx = (u32)i, .type = ObjectType_Sphere};
+    bvh_input.emplace_back(id, w.spheres[i].aabb);
+  }
+  for (s32 i = 0; i < w.num_quads; i++) {
+    Object_ID id {.idx = (u32)i, .type = ObjectType_Quad};
+    bvh_input.emplace_back(id, w.quads[i].aabb);
+  }
+
+  BVH_Node *bvh_root = make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
 
   // Render
 
@@ -211,7 +295,8 @@ do_raytraycing() {
                        buffer,
                        bvh_root,
                        cam,
-                       thread_flags[i]);
+                       thread_flags[i],
+                       w);
     }).detach();
   }
 
@@ -223,75 +308,10 @@ do_raytraycing() {
           .num_threads  = num_of_threads_supported,
           .thread_flags = thread_flags};
 }
-
-[[nodiscard]] World
-random_scene() {
-  World w;
-  w.num_spheres          = 0;
-  w.aabb                 = AABB {};
-  w.num_spheres_reserved = 22 * 22 + 2;
-  w.spheres = (Sphere *)alloc_perm(w.num_spheres_reserved * sizeof(Sphere));
-
-  Lambertian *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
-  new (ground_material) Lambertian {Vec3 {0.5, 0.5, 0.5}};
-  add_sphere(w, make_sphere(Vec3 {0, -1000, 0}, 1000), ground_material);
-
-  s32 iteration_counter = 0;
-
-  for (s32 a = -11; a < 11; a++) {
-    for (s32 b = -11; b < 11; b++) {
-      iteration_counter++;
-      // Space for 3 giant spheres, added outside the loop
-      if (w.num_spheres_reserved - w.num_spheres == 3) {
-        continue;
-      }
-
-      Vec3 const center {a + 0.9f * random_f32(), 0.2f, b + 0.9f * random_f32()};
-
-      if (dist(center, Vec3 {4, 0.2f, 0}) < 0.9f) {
-        continue;
-      }
-
-      f32 const choose_mat = random_f32();
-      Material *mat;
-      if (choose_mat < 0.8f) {
-        Vec3 const  albedo = random_vec3() * random_vec3();
-        mat                = (Lambertian *)alloc_perm(sizeof(Lambertian));
-        new (mat) Lambertian {albedo};
-      } else if (choose_mat < 0.95f) {
-        Vec3 const albedo = random_vec3_in_range(0.5f, 1);
-        f32 const  fuzz   = random_f32_in_range(0, 0.5f);
-        mat               = (Metal *)alloc_perm(sizeof(Metal));
-        new (mat) Metal {albedo, fuzz};
-      } else {
-        mat = (Dielectric *)alloc_perm(sizeof(Dielectric));
-        new (mat) Dielectric {1.5f};
-      }
-
-      add_sphere(w, make_sphere(center, 0.2f), mat);
-    }
-  }
-  logf("%d iterations \n", iteration_counter);
-
-  Dielectric *mat1 = (Dielectric *)alloc_perm(sizeof(Dielectric));
-  new (mat1) Dielectric {1.5f};
-
-  Lambertian *mat2 = (Lambertian *)alloc_perm(sizeof(Lambertian));
-  new (mat2) Lambertian {Vec3 {0.4f, 0.2f, 0.1f}};
-
-  Metal *mat3 = (Metal *)alloc_perm(sizeof(Metal));
-  new (mat3) Metal {Vec3 {0.7f, 0.6f, 0.5f}, 0.0f};
-
-  add_sphere(w, make_sphere(Vec3 {0, 1, 0}, 1.0), mat1);
-  add_sphere(w, make_sphere(Vec3 {-4, 1, 0}, 1.0), mat2);
-  add_sphere(w, make_sphere(Vec3 {4, 1, 0}, 1.0), mat3);
-
-  logf("%d/%d spheres generated.\n", w.num_spheres, w.num_spheres_reserved);
-
-  return w;
-}
 } // namespace rt
 
 #include "camera.cxx"
 #include "materials.cxx"
 #include "bvh.cxx"
+#include "shapes.cxx"
+#include "world.cxx"
