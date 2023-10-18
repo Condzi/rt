@@ -145,7 +145,7 @@ check_possible_contacts_for_collision(World const           &world,
 
 // @Hot
 [[nodiscard]] Vec3
-ray_color(World const &world, Ray const &r, BVH_Node *const root, s32 depth) {
+ray_color(World const &world, Ray const &r, std::vector<BVH_Flat> const& bvh, s32 depth) {
   // We exceeded ray bounce limit -- no more light is gathered.
   //
   if (depth == 0) {
@@ -158,7 +158,7 @@ ray_color(World const &world, Ray const &r, BVH_Node *const root, s32 depth) {
   // Broad-phase collision detection
   // @Note: 0.001 instead 0 fixes shadow acne
   //
-  std::vector<Object_ID> contacts = hit_BVH(root, r);
+  std::vector<Object_ID> contacts = hit_BVH(bvh, r);
   // Narrow-phase collision detection
   // No hit -- return background color.
   //
@@ -178,7 +178,7 @@ ray_color(World const &world, Ray const &r, BVH_Node *const root, s32 depth) {
   }
 
   Vec3 color_from_scatter =
-      attenuated_color * ray_color(world, scattered, root, depth - 1);
+      attenuated_color * ray_color(world, scattered, bvh, depth - 1);
 
   return emission + color_from_scatter;
 }
@@ -205,7 +205,7 @@ rt_loop_balanced(s32               max_row,
                  s32               image_width,
                  s32               image_height,
                  u8               *buffer,
-                 BVH_Node         *bvh_root,
+                 std::vector<BVH_Flat> const& bvh,
                  Camera           &cam,
                  std::atomic_bool &thread_flag,
                  World const      &world) {
@@ -220,7 +220,7 @@ rt_loop_balanced(s32               max_row,
         auto v = (f32(j) + random_f32()) / (image_height - 1);
 
         Ray r       = get_ray_at(cam, u, v);
-        pixel_color = pixel_color + ray_color(world, r, bvh_root, MAX_DEPTH);
+        pixel_color = pixel_color + ray_color(world, r, bvh, MAX_DEPTH);
       }
 
       pixel_color = pixel_color * COLOR_SCALE;
@@ -246,13 +246,13 @@ do_ray_tracing() {
   s32 const image_height = (s32)(image_width / aspect_ratio);
 
   // Camera setup
-  // Vec3 const lookfrom {13, 2, 3};
-  // Vec3 const lookat {0, 0, 0};
-  Vec3 const lookat {0, 2, 0};
+  Vec3 const lookfrom {13, 2, 3};
+  Vec3 const lookat {0, 0, 0};
+  // Vec3 const lookat {0, 2, 0};
   Vec3 const vup {0, 1, 0};
   f32 const  vfov = 20.0f;
   // Vec3 const lookfrom {0, 0, 9};
-  Vec3 const lookfrom {26, 3, 6};
+  //Vec3 const lookfrom {26, 3, 6};
   // f32 const  vfov          = 80.0f;
   f32 const  dist_to_focus = 15.0f;
   f32 const  aperture      = 0.1f;
@@ -263,7 +263,7 @@ do_ray_tracing() {
 
   // World
   // Static so it doesn't go out of scope
-  static World w = create_world(WorldType_SimpleLights);
+  static World w = create_world(WorldType_Book1Final);
   // Generate list of BVH_Input based on object IDs.
   //
   std::vector<BVH_Input> bvh_input;
@@ -277,7 +277,8 @@ do_ray_tracing() {
     bvh_input.emplace_back(id, w.quads[i].aabb);
   }
 
-  BVH_Node *bvh_root = make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
+  static std::vector<BVH_Flat> bvh =
+      make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
 
   // Render
 
@@ -293,7 +294,7 @@ do_ray_tracing() {
                        image_width,
                        image_height,
                        buffer,
-                       bvh_root,
+                       bvh,
                        cam,
                        thread_flags[i],
                        w);

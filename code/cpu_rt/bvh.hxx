@@ -11,16 +11,21 @@ struct BVH_Node {
   AABB aabb;
 };
 
+struct BVH_Flat {
+  uint16_t left, right;
+  AABB     aabb;
+};
+
 struct BVH_Input {
   Object_ID id;
   AABB      aabb;
 };
 
-[[nodiscard]] BVH_Node *
+[[nodiscard]] std::vector<BVH_Flat>
 make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb);
 
 // Returns a list of potential contacts.
 //
 [[nodiscard]] std::vector<Object_ID>
-hit_BVH(BVH_Node *root, Ray const &ray);
+hit_BVH(std::vector<BVH_Flat> const &bvh, Ray const &ray);
 } // namespace rt

@@ -33,22 +33,11 @@ potential problems:
 
 # To do / priority
 
-BVH should work only on AABBs. BVH should return the list (objects IDs?)
-whose bounding box was touched by the ray.
-Then, we should test the actual ray_vs_sphere/ray_vs_quad etc. on this
-set.
-Currently, we resolve ray_vs_sphere for every leaf node instantaneously. 
-The idea is to delay this until we found all possible intersections for given ray. This way we could resolve spheres and quads (and in future
-other shapes) separately.
-This also sounds better for CPU because there is less context-switching
-(original: ray_vs_aabb, then ray_vs_sphere, then again a bunch of ray_vs_aabb, new: ray_vs_aabb, then ray_vs_sphere/quad and that's it).
-
+- 3D models from quads
+- moving camera from editor (maybe render in small resolution for fast refresh)
+- refactor
 
 Figure out a way to cast multiple rays at the same time, so we can test ray vs aabb in parallel.
-
-- CPU Ray tracer (based on "rt in one weekend")
-  - lights
-  - 3D models?
 
 - Wrapping up
   - performance benchmark (low hanging fruits at least)
