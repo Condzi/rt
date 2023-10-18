@@ -99,14 +99,16 @@ flatten_recursive(BVH_Node              *node,
   flattened_tree.push_back(
       {65535, 65535, node->aabb}); // 65535 is used to indicate null pointers
 
+  uint16_t left_index = index;
   if (node->left) {
     flatten_recursive(node->left, flattened_tree, index);
-    flattened_tree[current_index].left = index - 1;
+    flattened_tree[current_index].left = left_index;
   }
 
+  uint16_t right_index = index;
   if (node->right) {
     flatten_recursive(node->right, flattened_tree, index);
-    flattened_tree[current_index].right = index - 1;
+    flattened_tree[current_index].right = right_index;
   }
 
   if (!node->left && !node->right) {
