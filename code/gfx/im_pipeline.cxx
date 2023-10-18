@@ -28,7 +28,7 @@ gfx_im_create_rasterizer_or_panic();
 
 void
 gfx_im_init_or_panic() {
-  gD3d.xxc_pipeline = (XXC_Pipeline *)alloc_perm(sizeof(XXC_Pipeline));
+  gD3d.xxc_pipeline = perm<XXC_Pipeline>();
 
   gfx_im_load_compile_create_shaders_or_panic();
   gfx_im_create_vbo_or_panic();

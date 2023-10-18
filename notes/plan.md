@@ -13,22 +13,23 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
 - [X] Balls rendering
 - [X] Materials
 - [X] BVH
-- [ ] Quads
+
+# October
+- [X] Quads
+- [X] Lights
 - [ ] Architecture refactor 
-    - ubermaterial
-- [ ] Textures
-- [ ] Lights
+    - [X] uber material
+- [ ] 3D models form quads
 
 @todo: be more specific
 - [ ] Compute shader pipeline setup
-- [ ] 3D models
 
 
 # October
 Writing the thesis document.
 
 
-Miscealenous 
+Miscellaneous 
 - [ ] Editor
 - [ ] 3D immediate pipeline (to preview objects/scene in editor)
 - [ ] Profiling 

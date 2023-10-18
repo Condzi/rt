@@ -1,69 +1,54 @@
 namespace rt {
 struct Hit_Info;
 
-// @TODO: remove polymorphism; use function pointers instead so we can use malloc
-//        and don't have to care about vtable ptr. -- kkubacki 07.09.2023
+enum Material_Type {
+  MaterialType_None = 0,
+  MaterialType_Lambertian,
+  MaterialType_Metal,
+  MaterialType_Dielectric,
+  MaterialType_Diffuse_Light,
+
+  MaterialType__count
+};
+
 struct Material {
-  // Returns true when the ray was absorbed.
-  // Calculates the new color and ray.
-  virtual bool
-  scatter(Ray const &in, Hit_Info const &hi, Vec3 &attenuation_color, Ray &out) = 0;
-
-  virtual Vec3
-  emitted() {
-    return {0, 0, 0};
-  }
+  Material_Type type;
+  union {
+    struct {
+      Vec3 albedo;
+    } lambertian;
+    struct {
+      Vec3 albedo;
+      f32  fuzz;
+    } metal;
+    struct {
+      f32 refraction_index;
+    } dielectric;
+    struct {
+      Vec3 albedo;
+    } diffuse_light;
+  };
 };
 
-struct Lambertian : Material {
-  Vec3 albedo;
+[[nodiscard]] bool
+scatter(Material const &material,
+        Ray const      &in,
+        Hit_Info const &hi,
+        Vec3           &attenuation_color,
+        Ray            &out);
 
-  Lambertian(Vec3 albedo_);
+[[nodiscard]] Vec3
+emit(Material const &material);
 
-  [[nodiscard]] bool
-  scatter(Ray const      &in,
-          Hit_Info const &hi,
-          Vec3           &attenuation_color,
-          Ray            &out) override;
-};
+[[nodiscard]] Material
+make_lambertian(Vec3 const &albedo);
 
-struct Metal : Material {
-  Vec3 albedo;
-  f32  fuzz;
+[[nodiscard]] Material
+make_metal(Vec3 const &albedo, f32 fuzz);
 
-  Metal(Vec3 albedo_, f32 fuzz_);
+[[nodiscard]] Material
+make_dielectric(f32 refraction_index);
 
-  [[nodiscard]] bool
-  scatter(Ray const      &in,
-          Hit_Info const &hi,
-          Vec3           &attenuation_color,
-          Ray            &out) override;
-};
-
-struct Dielectric : Material {
-  f32 refraction_index;
-
-  Dielectric(f32 refraction_index_);
-
-  [[nodiscard]] bool
-  scatter(Ray const      &in,
-          Hit_Info const &hi,
-          Vec3           &attenuation_color,
-          Ray            &out) override;
-};
-
-struct Diffuse_Light : Material {
-  Vec3 color;
-  Diffuse_Light(Vec3 col_) : color(col_) {};
-
-  bool
-  scatter(Ray const &, Hit_Info const &, Vec3 &, Ray &) {
-    return false;
-  }
-
-  virtual Vec3
-  emitted() {
-    return color;
-  }
-};
+[[nodiscard]] Material
+make_diffuse_light(Vec3 const &albedo);
 } // namespace rt

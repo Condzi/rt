@@ -25,4 +25,10 @@ pop_temp_mem_mark(s64 size);
 
 void
 clear_temp_mem();
+
+template <typename T>
+[[nodiscard]] T*
+perm(s64 count = 1) {
+  return (T*)alloc_perm(sizeof(T)*count);
+}
 } // namespace rt
