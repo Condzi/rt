@@ -87,12 +87,39 @@ find_best_axis_using_SAH(BVH_Input  *input,
   return best_axis;
 }
 
+static std::unordered_map<uint16_t, Object_Pack> flat_idx_to_obj_pack;
+
+void
+flatten_recursive(BVH_Node              *node,
+                  std::vector<BVH_Flat> &flattened_tree,
+                  uint16_t              &index) {
+  if (!node) return;
+
+  uint16_t current_index = index++;
+  flattened_tree.push_back(
+      {65535, 65535, node->aabb}); // 65535 is used to indicate null pointers
+
+  if (node->left) {
+    flatten_recursive(node->left, flattened_tree, index);
+    flattened_tree[current_index].left = index - 1;
+  }
+
+  if (node->right) {
+    flatten_recursive(node->right, flattened_tree, index);
+    flattened_tree[current_index].right = index - 1;
+  }
+
+  if (!node->left && !node->right) {
+    flat_idx_to_obj_pack[current_index] = leaf_to_object_pack.at(node);
+  }
+}
+
 static s32 best_bin_found     = 0;
 static s32 best_bin_not_found = 0;
 static s32 empty_slots        = 0;
 
 [[nodiscard]] BVH_Node *
-make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb) {
+make_BVH_internal(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb) {
   // s32 const axis = find_longest_axis(parent_aabb);
   s32 const axis = find_best_axis_using_SAH(input, begin, end, parent_aabb);
 
@@ -222,8 +249,8 @@ make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb) {
     right_aabb = make_aabb_from_aabbs(right_aabb, input[i].aabb);
   }
 
-  root->left  = make_BVH(input, begin, mid, left_aabb);
-  root->right = make_BVH(input, mid, end, right_aabb);
+  root->left  = make_BVH_internal(input, begin, mid, left_aabb);
+  root->right = make_BVH_internal(input, mid, end, right_aabb);
 
   /*
     logf("best_bin_found=%d \t best_bin_not_found=%d\n",
@@ -236,35 +263,49 @@ make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb) {
   return root;
 }
 
-thread_local std::vector<BVH_Node *> candidates;
+[[nodiscard]] std::vector<BVH_Flat>
+make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb) {
+  BVH_Node *root = make_BVH_internal(input, begin, end, parent_aabb);
+
+  std::vector<BVH_Flat> flat;
+  uint16_t              idx = 0;
+  flatten_recursive(root, flat, idx);
+
+  return flat;
+}
+
+thread_local std::vector<uint16_t> candidates;
 void
-hit_BVH_internal(BVH_Node *root, Vec3 const &ray_origin, Vec3 const &ray_inv_dir) {
+hit_BVH_internal(std::vector<BVH_Flat> const &bvh,
+                 uint16_t                     idx,
+                 Vec3 const                  &ray_origin,
+                 Vec3 const                  &ray_inv_dir) {
   if (!ray_vs_aabb(
-          ray_origin, ray_inv_dir, {.min = 0.001f, .max = FLT_MAX}, root->aabb)) {
+          ray_origin, ray_inv_dir, {.min = 0.001f, .max = FLT_MAX}, bvh[idx].aabb)) {
     return;
   }
 
   // Potential hit
-  if (root->left == NULL && root->right == NULL) {
-    candidates.push_back(root);
+  if (bvh[idx].left == 65535 && bvh[idx].right == 65535) {
+    candidates.push_back(idx);
     return;
   }
 
-  hit_BVH_internal(root->left, ray_origin, ray_inv_dir);
-  hit_BVH_internal(root->right, ray_origin, ray_inv_dir);
+  hit_BVH_internal(bvh, bvh[idx].left, ray_origin, ray_inv_dir);
+  hit_BVH_internal(bvh, bvh[idx].right, ray_origin, ray_inv_dir);
 }
 
 [[nodiscard]] std::vector<Object_ID>
-hit_BVH(BVH_Node *root, Ray const &ray) {
+hit_BVH(std::vector<BVH_Flat> const &bvh, Ray const &ray) {
   candidates.reserve(128);
   candidates.clear();
 
-  hit_BVH_internal(root, ray.origin, ray.direction_inv);
+  hit_BVH_internal(bvh, 0, ray.origin, ray.direction_inv);
 
   std::vector<Object_ID> result;
   result.reserve(candidates.size() * LEAF_WIDTH);
-  for (BVH_Node *node : candidates) {
-    auto const &pack = leaf_to_object_pack[node];
+  for (uint16_t node : candidates) {
+    auto const &pack = flat_idx_to_obj_pack[node];
     std::copy(pack.unpacked, pack.unpacked + LEAF_WIDTH, std::back_inserter(result));
   }
 
