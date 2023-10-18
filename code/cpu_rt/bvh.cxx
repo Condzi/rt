@@ -87,7 +87,8 @@ find_best_axis_using_SAH(BVH_Input  *input,
   return best_axis;
 }
 
-static std::unordered_map<uint16_t, Object_Pack> flat_idx_to_obj_pack;
+static std::vector<Object_Pack>  objects;
+static std::array<uint16_t, 256> flat_idx_to_obj_idx;
 
 void
 flatten_recursive(BVH_Node              *node,
@@ -112,7 +113,8 @@ flatten_recursive(BVH_Node              *node,
   }
 
   if (!node->left && !node->right) {
-    flat_idx_to_obj_pack[current_index] = leaf_to_object_pack.at(node);
+    flat_idx_to_obj_idx[current_index] = (uint16_t)objects.size();
+    objects.push_back(leaf_to_object_pack.at(node));
   }
 }
 
@@ -272,6 +274,7 @@ make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb) {
   std::vector<BVH_Flat> flat;
   uint16_t              idx = 0;
   flatten_recursive(root, flat, idx);
+  logf("idx=%d\n", (int)idx);
 
   return flat;
 }
@@ -307,7 +310,7 @@ hit_BVH(std::vector<BVH_Flat> const &bvh, Ray const &ray) {
   std::vector<Object_ID> result;
   result.reserve(candidates.size() * LEAF_WIDTH);
   for (uint16_t node : candidates) {
-    auto const &pack = flat_idx_to_obj_pack[node];
+    auto const &pack = objects[flat_idx_to_obj_idx[node]];
     std::copy(pack.unpacked, pack.unpacked + LEAF_WIDTH, std::back_inserter(result));
   }
 
