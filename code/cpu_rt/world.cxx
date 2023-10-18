@@ -55,9 +55,9 @@ world_book1() {
   w.num_spheres          = 0;
   w.aabb                 = AABB {};
   w.num_spheres_reserved = 22 * 22 + 2;
-  w.spheres = (Sphere *)alloc_perm(w.num_spheres_reserved * sizeof(Sphere));
+  w.spheres                          = perm<Sphere>(w.num_spheres_reserved);
 
-  Lambertian *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  Lambertian *ground_material = perm<Lambertian>();
   new (ground_material) Lambertian {Vec3 {0.5, 0.5, 0.5}};
   add_sphere(w, make_sphere(Vec3 {0, -1000, 0}, 1000), ground_material);
 
@@ -81,15 +81,15 @@ world_book1() {
       Material *mat;
       if (choose_mat < 0.8f) {
         Vec3 const albedo = random_vec3() * random_vec3();
-        mat               = (Lambertian *)alloc_perm(sizeof(Lambertian));
+        mat               = perm<Lambertian>();
         new (mat) Lambertian {albedo};
       } else if (choose_mat < 0.95f) {
         Vec3 const albedo = random_vec3_in_range(0.5f, 1);
         f32 const  fuzz   = random_f32_in_range(0, 0.5f);
-        mat               = (Metal *)alloc_perm(sizeof(Metal));
+        mat               = perm<Metal>();
         new (mat) Metal {albedo, fuzz};
       } else {
-        mat = (Dielectric *)alloc_perm(sizeof(Dielectric));
+        mat = perm<Dielectric>();
         new (mat) Dielectric {1.5f};
       }
 
@@ -98,13 +98,13 @@ world_book1() {
   }
   logf("%d iterations \n", iteration_counter);
 
-  Dielectric *mat1 = (Dielectric *)alloc_perm(sizeof(Dielectric));
+  Dielectric *mat1 = perm<Dielectric>();
   new (mat1) Dielectric {1.5f};
 
-  Lambertian *mat2 = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  Lambertian *mat2 = perm<Lambertian>();
   new (mat2) Lambertian {Vec3 {0.4f, 0.2f, 0.1f}};
 
-  Metal *mat3 = (Metal *)alloc_perm(sizeof(Metal));
+  Metal *mat3 = perm<Metal>();
   new (mat3) Metal {Vec3 {0.7f, 0.6f, 0.5f}, 0.0f};
 
   add_sphere(w, make_sphere(Vec3 {0, 1, 0}, 1.0), mat1);
@@ -120,13 +120,13 @@ world_book1() {
 world_quads() {
   World w              = {0};
   w.num_quads_reserved = 5;
-  w.quads              = (Quad *)alloc_perm(sizeof(Quad) * w.num_quads_reserved);
+  w.quads              = perm<Quad>(w.num_quads_reserved);
 
-  Lambertian *red    = (Lambertian *)alloc_perm(sizeof(Lambertian));
-  Lambertian *green  = (Lambertian *)alloc_perm(sizeof(Lambertian));
-  Lambertian *blue   = (Lambertian *)alloc_perm(sizeof(Lambertian));
-  Lambertian *orange = (Lambertian *)alloc_perm(sizeof(Lambertian));
-  Lambertian *teal   = (Lambertian *)alloc_perm(sizeof(Lambertian));
+  Lambertian *red    = perm<Lambertian>();
+  Lambertian *green  = perm<Lambertian>();
+  Lambertian *blue   = perm<Lambertian>();
+  Lambertian *orange = perm<Lambertian>();
+  Lambertian *teal   = perm<Lambertian>();
 
   new (red) Lambertian {Vec3 {1.0f, 0.2f, 0.2f}};
   new (green) Lambertian {Vec3 {0.2f, 1.0f, 0.2f}};
@@ -148,12 +148,12 @@ world_simple_lights() {
   World w                = {0};
   w.num_spheres_reserved = 3;
   w.num_quads_reserved   = 1;
-  w.quads                = (Quad *)alloc_perm(sizeof(Quad) * w.num_quads_reserved);
-  w.spheres = (Sphere *)alloc_perm(sizeof(Sphere) * w.num_spheres_reserved);
+  w.quads                = perm<Quad>(w.num_quads_reserved);
+  w.spheres              = perm<Sphere>(w.num_spheres_reserved);
 
-  Lambertian    *ground_material = (Lambertian *)alloc_perm(sizeof(Lambertian));
-  Lambertian    *green           = (Lambertian *)alloc_perm(sizeof(Lambertian));
-  Diffuse_Light *light           = (Diffuse_Light *)alloc_perm(sizeof(Diffuse_Light));
+  Lambertian    *ground_material = perm<Lambertian>();
+  Lambertian    *green           = perm<Lambertian>();
+  Diffuse_Light *light           = perm<Diffuse_Light>();
 
   new (ground_material) Lambertian {Vec3 {1.0, 0.5, 0.5}};
   new (green) Lambertian {Vec3 {0.2f, 1.0f, 0.2f}};

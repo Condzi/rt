@@ -155,7 +155,7 @@ os_init_filesystem() {
   // @Unicode!!!
   {
     ::DWORD cwd_len = ::GetCurrentDirectoryA(0, NULL);
-    char   *cwd     = (char *)alloc_perm(cwd_len);
+    char   *cwd     = perm<char>(cwd_len);
     ::DWORD status  = ::GetCurrentDirectoryA(cwd_len, cwd);
 
     if (status == 0) {

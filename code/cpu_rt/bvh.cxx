@@ -100,7 +100,7 @@ make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb) {
     return a.aabb.v[axis].min < b.aabb.v[axis].min;
   };
 
-  BVH_Node *root = (BVH_Node *)alloc_perm(sizeof(BVH_Node));
+  BVH_Node *root = perm<BVH_Node>();
   root->aabb     = parent_aabb;
 
   s32 const object_span = end - begin;

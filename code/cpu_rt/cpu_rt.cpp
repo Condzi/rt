@@ -281,7 +281,7 @@ do_ray_tracing() {
 
   // Render
 
-  u8 *buffer = (u8 *)alloc_perm(image_width * image_height * NUM_CHANNELS);
+  u8 *buffer = perm<u8>(image_width * image_height * NUM_CHANNELS);
 
   s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
 

@@ -52,7 +52,7 @@ to_temp_string(String_Builder &sb) {
 to_perm_string(String_Builder &sb) {
   check_(sb.data != NULL);
 
-  char *buffer = (char *)alloc_perm(sb.size);
+  char *buffer = perm<char>(sb.size);
   ::memcpy(buffer, sb.data, sb.size);
 
   return {.count = sb.size, .data = buffer};
