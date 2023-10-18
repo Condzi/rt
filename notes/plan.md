@@ -17,13 +17,14 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
 # October
 - [X] Quads
 - [X] Lights
-- [ ] Architecture refactor 
+- [X] Architecture refactor 
     - [X] uber material
-    - [ ] replace unordered_map with an array in bvh
-    - [ ] flatten BVH to an array and use indices instead of pointers
+    - [X] replace unordered_map with an array in bvh
+    - [X] flatten BVH to an array and use indices instead of pointers
 - [ ] Compute Shaders
   - [ ] pipeline setup, first shader that outputs a simple texture
   - [ ] pack and send RT data to GPU
+  - [ ] separate cpu and gpu code
 
 @todo: be more specific
 - [ ] 3D models form quads
