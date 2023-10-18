@@ -171,9 +171,9 @@ ray_color(World const &world, Ray const &r, BVH_Node *const root, s32 depth) {
   Ray  scattered;
   Vec3 attenuated_color;
   // @Note: we don't support textures yet, so we emit a solid color.
-  Vec3 emission = hi.material->emitted();
+  Vec3 emission = emit(*hi.material);
 
-  if (!hi.material->scatter(r, hi, attenuated_color, scattered)) {
+  if (!scatter(*hi.material, r, hi, attenuated_color, scattered)) {
     return emission;
   }
 

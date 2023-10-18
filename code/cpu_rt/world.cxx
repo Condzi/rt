@@ -57,8 +57,8 @@ world_book1() {
   w.num_spheres_reserved = 22 * 22 + 2;
   w.spheres                          = perm<Sphere>(w.num_spheres_reserved);
 
-  Lambertian *ground_material = perm<Lambertian>();
-  new (ground_material) Lambertian {Vec3 {0.5, 0.5, 0.5}};
+  Material *ground_material = perm<Material>();
+  *ground_material          = make_lambertian({0.5, 0.5, 0.5});
   add_sphere(w, make_sphere(Vec3 {0, -1000, 0}, 1000), ground_material);
 
   s32 iteration_counter = 0;
@@ -78,19 +78,16 @@ world_book1() {
       }
 
       f32 const choose_mat = random_f32();
-      Material *mat;
+      Material *mat        = perm<Material>();
       if (choose_mat < 0.8f) {
         Vec3 const albedo = random_vec3() * random_vec3();
-        mat               = perm<Lambertian>();
-        new (mat) Lambertian {albedo};
+        *mat              = make_lambertian(albedo);
       } else if (choose_mat < 0.95f) {
         Vec3 const albedo = random_vec3_in_range(0.5f, 1);
         f32 const  fuzz   = random_f32_in_range(0, 0.5f);
-        mat               = perm<Metal>();
-        new (mat) Metal {albedo, fuzz};
+        *mat = make_metal(albedo, fuzz);
       } else {
-        mat = perm<Dielectric>();
-        new (mat) Dielectric {1.5f};
+        *mat = make_dielectric(1.5f);
       }
 
       add_sphere(w, make_sphere(center, 0.2f), mat);
@@ -98,14 +95,14 @@ world_book1() {
   }
   logf("%d iterations \n", iteration_counter);
 
-  Dielectric *mat1 = perm<Dielectric>();
-  new (mat1) Dielectric {1.5f};
+  Material *mat1 = perm<Material>();
+  *mat1          = make_dielectric(1.5f);
 
-  Lambertian *mat2 = perm<Lambertian>();
-  new (mat2) Lambertian {Vec3 {0.4f, 0.2f, 0.1f}};
+  Material *mat2 = perm<Material>();
+  *mat2          = make_lambertian({0.4f, 0.2f, 0.1f});
 
-  Metal *mat3 = perm<Metal>();
-  new (mat3) Metal {Vec3 {0.7f, 0.6f, 0.5f}, 0.0f};
+  Material *mat3 = perm<Material>();
+  *mat3          = make_metal(Vec3 {0.7f, 0.6f, 0.5f}, 0.0f);
 
   add_sphere(w, make_sphere(Vec3 {0, 1, 0}, 1.0), mat1);
   add_sphere(w, make_sphere(Vec3 {-4, 1, 0}, 1.0), mat2);
@@ -122,17 +119,17 @@ world_quads() {
   w.num_quads_reserved = 5;
   w.quads              = perm<Quad>(w.num_quads_reserved);
 
-  Lambertian *red    = perm<Lambertian>();
-  Lambertian *green  = perm<Lambertian>();
-  Lambertian *blue   = perm<Lambertian>();
-  Lambertian *orange = perm<Lambertian>();
-  Lambertian *teal   = perm<Lambertian>();
+  Material *red    = perm<Material>();
+  Material *green  = perm<Material>();
+  Material *blue   = perm<Material>();
+  Material *orange = perm<Material>();
+  Material *teal   = perm<Material>();
 
-  new (red) Lambertian {Vec3 {1.0f, 0.2f, 0.2f}};
-  new (green) Lambertian {Vec3 {0.2f, 1.0f, 0.2f}};
-  new (blue) Lambertian {Vec3 {0.2f, 0.2f, 1.0f}};
-  new (orange) Lambertian {Vec3 {1.0f, 0.5f, 0.0f}};
-  new (teal) Lambertian {Vec3 {0.2f, 0.8f, 0.8f}};
+  *red    = make_lambertian({1.0f, 0.2f, 0.2f});
+  *green  = make_lambertian({0.2f, 1.0f, 0.2f});
+  *blue   = make_lambertian({0.2f, 0.2f, 1.0f});
+  *orange = make_lambertian({1.0f, 0.5f, 0.0f});
+  *teal   = make_lambertian({0.2f, 0.8f, 0.8f});
 
   add_quad(w, make_quad({-3, -2, 5}, {0, 0, -4}, {0, 4, 0}), red);
   add_quad(w, make_quad({-2, -2, 0}, {4, 0, 0}, {0, 4, 0}), green);
@@ -151,13 +148,13 @@ world_simple_lights() {
   w.quads                = perm<Quad>(w.num_quads_reserved);
   w.spheres              = perm<Sphere>(w.num_spheres_reserved);
 
-  Lambertian    *ground_material = perm<Lambertian>();
-  Lambertian    *green           = perm<Lambertian>();
-  Diffuse_Light *light           = perm<Diffuse_Light>();
+  Material *ground_material = perm<Material>();
+  Material *green           = perm<Material>();
+  Material *light           = perm<Material>();
 
-  new (ground_material) Lambertian {Vec3 {1.0, 0.5, 0.5}};
-  new (green) Lambertian {Vec3 {0.2f, 1.0f, 0.2f}};
-  new (light) Diffuse_Light(Vec3 {10, 10, 10});
+  *ground_material = make_lambertian({1.0, 0.5, 0.5});
+  *green           = make_lambertian({0.2f, 1.0f, 0.2f});
+  *light           = make_diffuse_light({10, 10, 10});
 
   add_sphere(w, make_sphere(Vec3 {0, -1000, 0}, 1000), ground_material);
   add_sphere(w, make_sphere(Vec3 {0, 2, 0}, 2), green);
