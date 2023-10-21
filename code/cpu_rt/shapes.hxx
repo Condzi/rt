@@ -1,14 +1,11 @@
 namespace rt {
-struct Material;
-
 struct Sphere {
   Vec3 center;
   // @Note: can be negative: surface normals will point inward.
   f32  radius;
 
   AABB aabb;
-  // Move this somewhere else?
-  Material *material;
+  Material_ID mat_id;
 };
 
 // Creates a sphere with empty material.
@@ -25,7 +22,7 @@ struct Quad {
   Vec3 w;
 
   AABB      aabb;
-  Material *material;
+  Material_ID mat_id;
 };
 
 // Create a quad with empty material.

@@ -8,11 +8,11 @@ make_ray(Vec3 origin, Vec3 direction) {
 }
 
 struct Hit_Info {
-  Material *material;
-  Vec3      p;
-  Vec3      normal;
-  f32       t;
-  bool      front_face;
+  Material_ID mat_id;
+  Vec3        p;
+  Vec3        normal;
+  f32         t;
+  bool        front_face;
 };
 
 [[nodiscard]] Vec3
@@ -53,7 +53,7 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
 
   hi.front_face = (dot(r.direction, outward_normal) < 0);
   hi.normal     = outward_normal * (hi.front_face ? 1.f : -1.f);
-  hi.material   = s.material;
+  hi.mat_id     = s.mat_id;
 
   return true;
 }
@@ -91,7 +91,7 @@ hit_quad(Ray const &r, Quad const &q, f32 t_min, f32 t_max, Hit_Info &hi) {
   // Ray hits the 2D shape; set the hit record and return true.
   hi.t          = t;
   hi.p          = intersection_point;
-  hi.material   = q.material;
+  hi.mat_id     = q.mat_id;
   hi.front_face = (dot(r.direction, q.normal) < 0);
   hi.normal     = q.normal * (hi.front_face ? 1.f : -1.f);
 
@@ -171,9 +171,9 @@ ray_color(World const &world, Ray const &r, std::vector<BVH_Flat> const& bvh, s3
   Ray  scattered;
   Vec3 attenuated_color;
   // @Note: we don't support textures yet, so we emit a solid color.
-  Vec3 emission = emit(*hi.material);
+  Vec3 emission = emit(world.materials[hi.mat_id]);
 
-  if (!scatter(*hi.material, r, hi, attenuated_color, scattered)) {
+  if (!scatter(world.materials[hi.mat_id], r, hi, attenuated_color, scattered)) {
     return emission;
   }
 
@@ -185,7 +185,7 @@ ray_color(World const &world, Ray const &r, std::vector<BVH_Flat> const& bvh, s3
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 100; // 500
+s32 const SAMPLES_PER_PIXEL = 500; // 500
 // @todo: move to ui
 s32 const MAX_DEPTH = 50; // 50
 
@@ -313,7 +313,7 @@ do_ray_tracing() {
   return {.image_size   = {(f32)image_width, (f32)image_height},
           .rgba_data    = {.count = image_width * image_height * NUM_CHANNELS,
                            .bytes = buffer},
-          .num_threads  = 2, //num_of_threads_supported,
+          .num_threads  = num_of_threads_supported,
           .thread_flags = thread_flags};
 }
 } // namespace rt

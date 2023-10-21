@@ -1,7 +1,7 @@
 namespace rt {
 struct Hit_Info;
 
-enum Material_Type {
+enum Material_Type : uint16_t {
   MaterialType_None = 0,
   MaterialType_Lambertian,
   MaterialType_Metal,
@@ -10,6 +10,9 @@ enum Material_Type {
 
   MaterialType__count
 };
+
+// @Note: redo this. 0 should not be a valid material id.
+using Material_ID = uint32_t;
 
 struct Material {
   Material_Type type;

@@ -112,7 +112,6 @@ main(void) {
 
     dear_imgui_update();
 
-    /*
     ImGui::Begin("CPU Ray Tracing");
     // @Note: we do it over and over again because RT is ray tracing all the time
     //       In future just add an atomic that counts number of threads finished.
@@ -120,7 +119,6 @@ main(void) {
     ImGui::Image(rt_out_as_texture,
                  ImVec2(rt_out.image_size.width, rt_out.image_size.height));
     ImGui::End();
-    */
 
     ImGui::Begin("GPU Ray Tracing");
     ImGui::Image(rt_tex, ImVec2(512, 512));
@@ -159,8 +157,8 @@ main(void) {
 
     clear_temp_mem();
 
-   // auto res = (ID3D11ShaderResourceView *)rt_out_as_texture;
-   // d3d_safe_release_(res);
+    auto res = (ID3D11ShaderResourceView *)rt_out_as_texture;
+    d3d_safe_release_(res);
   }
 
   logf("Goodbye :)\n");

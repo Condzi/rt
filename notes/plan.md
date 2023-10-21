@@ -22,8 +22,10 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
     - [X] replace unordered_map with an array in bvh
     - [X] flatten BVH to an array and use indices instead of pointers
 - [ ] Compute Shaders
-  - [ ] pipeline setup, first shader that outputs a simple texture
+  - [X] pipeline setup, first shader that outputs a simple texture
+  - [X] use indices instead of pointer to the materials in code
   - [ ] pack and send RT data to GPU
+  - [ ] port CPU code to GPU (should be easy, since we hae this rt_loop_balanced already)
   - [ ] separate cpu and gpu code
 
 @todo: be more specific
