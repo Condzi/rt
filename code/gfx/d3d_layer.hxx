@@ -4,17 +4,20 @@
  * to help in maintaining code.
  */
 
-using IDevice           = ::ID3D11Device;
-using IDeviceContext    = ::ID3D11DeviceContext;
-using ISwapChain        = ::IDXGISwapChain;
-using IRenderTargetView = ::ID3D11RenderTargetView;
-using ITexture2D        = ::ID3D11Texture2D;
-using IRasterizerState  = ::ID3D11RasterizerState;
-using IVertexShader     = ::ID3D11VertexShader;
-using IPixelShader      = ::ID3D11PixelShader;
-using IInputLayout      = ::ID3D11InputLayout;
-using IBuffer           = ::ID3D11Buffer;
-using IBlob             = ::ID3DBlob;
+using IDevice              = ::ID3D11Device;
+using IDeviceContext       = ::ID3D11DeviceContext;
+using ISwapChain           = ::IDXGISwapChain;
+using IRenderTargetView    = ::ID3D11RenderTargetView;
+using ITexture2D           = ::ID3D11Texture2D;
+using IRasterizerState     = ::ID3D11RasterizerState;
+using IComputeShader       = ::ID3D11ComputeShader;
+using IVertexShader        = ::ID3D11VertexShader;
+using IPixelShader         = ::ID3D11PixelShader;
+using IInputLayout         = ::ID3D11InputLayout;
+using IBuffer              = ::ID3D11Buffer;
+using IBlob                = ::ID3DBlob;
+using IUnorderedAccessView = ::ID3D11UnorderedAccessView;
+using IShaderResourceView  = ::ID3D11ShaderResourceView;
 
 #define d3d_safe_release_(x)                                                         \
   do {                                                                               \

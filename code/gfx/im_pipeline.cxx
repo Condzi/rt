@@ -1,4 +1,16 @@
 namespace rt {
+// XX - x and y position
+// C  - 32-bit color
+struct Vertex_XXC {
+  Vec2 position;
+  u32  color;
+};
+
+struct alignas(16) IM_Constants {
+  Mat4x4 projection;
+  Mat4x4 camera;
+};
+
 struct XXC_Pipeline {
   ::D3D11_VIEWPORT    viewport;
   ::IRasterizerState *rasterizer_state = NULL;
@@ -8,7 +20,7 @@ struct XXC_Pipeline {
   ::IBuffer          *vbo              = NULL;
   ::IBuffer          *consts           = NULL;
 
-  Constants constants;
+  IM_Constants constants;
 
   Vertex_XXC v[IM_TRIS_COUNT * 3];
   s64        v_mark;
@@ -181,7 +193,7 @@ gfx_im_flush() {
     hr = device_ctx.Map(pipeline.consts, 0, D3D11_MAP_WRITE_DISCARD, 0, &consts_data);
     d3d_check_hresult_(hr);
 
-    Constants constants_transposed;
+    IM_Constants constants_transposed;
     constants_transposed.camera     = transpose(pipeline.constants.camera);
     constants_transposed.projection = transpose(pipeline.constants.projection);
 
@@ -222,7 +234,7 @@ gfx_im_create_vbo_or_panic() {
 
 void
 gfx_im_create_constants_buffer_or_panic() {
-  ::D3D11_BUFFER_DESC const consts_desc = {.ByteWidth = sizeof(Constants),
+  ::D3D11_BUFFER_DESC const consts_desc = {.ByteWidth = sizeof(IM_Constants),
                                            .Usage     = D3D11_USAGE_DYNAMIC,
                                            .BindFlags = D3D11_BIND_CONSTANT_BUFFER,
                                            .CPUAccessFlags = D3D11_CPU_ACCESS_WRITE};

@@ -94,6 +94,12 @@ main(void) {
       std::chrono::high_resolution_clock::now();
 
   Rt_Output rt_out = do_ray_tracing();
+  gfx_rt_start();
+  // @Note: we need to unbind the uav because we can't write and read at the same time
+  ID3D11UnorderedAccessView* nullUAV = NULL;
+  gD3d.device_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, NULL);
+
+  ImTextureID rt_tex = gfx_rt_output_as_imgui_texture();
 
   // write_png_or_panic("hello_ray_tracing.png", rt_out.rgba_data, rt_out.image_size);
 
@@ -106,12 +112,18 @@ main(void) {
 
     dear_imgui_update();
 
+    /*
     ImGui::Begin("CPU Ray Tracing");
     // @Note: we do it over and over again because RT is ray tracing all the time
     //       In future just add an atomic that counts number of threads finished.
     ImTextureID rt_out_as_texture = dear_imgui_create_texture_from_rt_output(rt_out);
     ImGui::Image(rt_out_as_texture,
                  ImVec2(rt_out.image_size.width, rt_out.image_size.height));
+    ImGui::End();
+    */
+
+    ImGui::Begin("GPU Ray Tracing");
+    ImGui::Image(rt_tex, ImVec2(512, 512));
     ImGui::End();
 
     ImGui::Begin("Threads");
@@ -147,8 +159,8 @@ main(void) {
 
     clear_temp_mem();
 
-    auto res = (ID3D11ShaderResourceView *)rt_out_as_texture;
-    d3d_safe_release_(res);
+   // auto res = (ID3D11ShaderResourceView *)rt_out_as_texture;
+   // d3d_safe_release_(res);
   }
 
   logf("Goodbye :)\n");

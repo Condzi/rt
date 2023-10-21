@@ -280,6 +280,13 @@ do_ray_tracing() {
   static std::vector<BVH_Flat> bvh =
       make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
 
+  // @Todo: fix me
+  {
+    GFX_RT_Input in {
+        .im_size = {(f32)image_width, (f32)image_height}, .w = w, .c = cam};
+    gfx_rt_init_or_panic(in);
+  }
+
   // Render
 
   u8 *buffer = perm<u8>(image_width * image_height * NUM_CHANNELS);
@@ -306,7 +313,7 @@ do_ray_tracing() {
   return {.image_size   = {(f32)image_width, (f32)image_height},
           .rgba_data    = {.count = image_width * image_height * NUM_CHANNELS,
                            .bytes = buffer},
-          .num_threads  = num_of_threads_supported,
+          .num_threads  = 2, //num_of_threads_supported,
           .thread_flags = thread_flags};
 }
 } // namespace rt

@@ -8,6 +8,7 @@ struct D3d {
   ::IRenderTargetView *render_target_view = NULL;
 
   struct XXC_Pipeline *xxc_pipeline = NULL;
+  struct RT_Pipeline  *rt_pipeline = NULL;
 } static gD3d;
 
 void
@@ -76,7 +77,7 @@ gfx_render() {
   // Tell the output merger to use our render target
   gD3d.device_context->OMSetRenderTargets(1, &gD3d.render_target_view, NULL);
 
-  gfx_im_flush();
+  //gfx_im_flush();
   dear_imgui_draw();
 
   // Present
@@ -85,3 +86,4 @@ gfx_render() {
 } // namespace rt
 
 #include "im_pipeline.cxx"
+#include "rt_pipeline.cxx"
