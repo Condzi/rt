@@ -57,6 +57,10 @@ struct RT_Pipeline {
   ::IBuffer *gpu_quads     = NULL;
   ::IBuffer *gpu_materials = NULL;
 
+  ::IShaderResourceView *gpu_spheres_view;
+  ::IShaderResourceView *gpu_quads_view;
+  ::IShaderResourceView *gpu_materials_view;
+
   RT_Constants constants;
 
   RT_Sphere   *spheres   = NULL;
@@ -81,7 +85,10 @@ void
 gfx_rt_create_uav_or_panic();
 
 void
-gfx_rt_create_constants_buffer_or_panic();
+gfx_rt_create_rt_world_constants_or_panic();
+
+void
+gfx_rt_create_rt_world_srvs_or_panic();
 
 //
 //  Public functions
@@ -95,12 +102,24 @@ gfx_rt_init_or_panic(GFX_RT_Input const &in) {
   gfx_rt_load_and_compile_shader_or_panic();
   gfx_rt_create_output_texture_or_panic();
   gfx_rt_create_uav_or_panic();
-  gfx_rt_create_constants_buffer_or_panic();
+  gfx_rt_create_rt_world_constants_or_panic();
+  gfx_rt_create_rt_world_srvs_or_panic();
 }
 
 void
 gfx_rt_start() {
+  // Bind buffers
+  //
   gD3d.device_context->CSSetConstantBuffers(0, 1, &(gD3d.rt_pipeline->gpu_consts));
+  gD3d.device_context->CSSetShaderResources(
+      0, 1, &(gD3d.rt_pipeline->gpu_spheres_view));
+  /*
+gD3d.device_context->CSSetShaderResources(
+  1, 1, &(gD3d.rt_pipeline->gpu_quads_view));
+  */
+  gD3d.device_context->CSSetShaderResources(
+      2, 1, &(gD3d.rt_pipeline->gpu_materials_view));
+
   gD3d.device_context->CSSetUnorderedAccessViews(
       0, 1, &(gD3d.rt_pipeline->uav), NULL);
   gD3d.device_context->CSSetShader(gD3d.rt_pipeline->cs, NULL, 0);
@@ -109,10 +128,14 @@ gfx_rt_start() {
   //
   gD3d.device_context->Dispatch(512, 512, 1);
 
-  // Unbind the constant buffer
+  // Unbind buffers
   //
-  ID3D11Buffer *nullBuffer = nullptr;
-  gD3d.device_context->CSSetConstantBuffers(0, 1, &nullBuffer);
+  ::ID3D11Buffer        *null_buffer = NULL;
+  ::IShaderResourceView *null_view   = NULL;
+  gD3d.device_context->CSSetConstantBuffers(0, 1, &null_buffer);
+  gD3d.device_context->CSSetShaderResources(0, 1, &null_view);
+  gD3d.device_context->CSSetShaderResources(1, 1, &null_view);
+  gD3d.device_context->CSSetShaderResources(2, 1, &null_view);
 }
 
 [[nodiscard]] void *
@@ -283,16 +306,104 @@ gfx_rt_create_uav_or_panic() {
 }
 
 void
-gfx_rt_create_constants_buffer_or_panic() {
+gfx_rt_create_rt_world_constants_or_panic() {
+  ::HRESULT hr;
+
+  ::D3D11_SUBRESOURCE_DATA const cs_data {.pSysMem = &(gD3d.rt_pipeline->constants)};
+  ::D3D11_SUBRESOURCE_DATA const sp_data {.pSysMem = gD3d.rt_pipeline->spheres};
+  ::D3D11_SUBRESOURCE_DATA const qs_data {.pSysMem = gD3d.rt_pipeline->quads};
+  ::D3D11_SUBRESOURCE_DATA const ms_data {.pSysMem = gD3d.rt_pipeline->materials};
+
+  // Constants
+  //
   ::D3D11_BUFFER_DESC const consts_desc = {.ByteWidth = sizeof(RT_Constants),
                                            .Usage     = D3D11_USAGE_IMMUTABLE,
                                            .BindFlags = D3D11_BIND_CONSTANT_BUFFER,
                                            .CPUAccessFlags = 0};
-  ::HRESULT hr;
-  ::D3D11_SUBRESOURCE_DATA  cs_data {.pSysMem = &(gD3d.rt_pipeline->constants)};
 
   hr = gD3d.device->CreateBuffer(
       &consts_desc, &cs_data, &gD3d.rt_pipeline->gpu_consts);
+  d3d_check_hresult_(hr);
+
+  // Spheres
+  //
+  ::D3D11_BUFFER_DESC const spheres_desc = {
+      .ByteWidth      = gD3d.rt_pipeline->constants.num_spheres * sizeof(RT_Sphere),
+      .Usage          = D3D11_USAGE_IMMUTABLE,
+      .BindFlags      = D3D11_BIND_SHADER_RESOURCE,
+      .CPUAccessFlags = 0,
+      .MiscFlags      = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
+      .StructureByteStride = sizeof(RT_Sphere)};
+
+  hr = gD3d.device->CreateBuffer(
+      &spheres_desc, &sp_data, &gD3d.rt_pipeline->gpu_spheres);
+  d3d_check_hresult_(hr);
+
+  // Quads
+  //
+  /*
+  ::D3D11_BUFFER_DESC const quads_desc = {
+      .ByteWidth           = gD3d.rt_pipeline->constants.num_quads * sizeof(RT_Quad),
+      .Usage               = D3D11_USAGE_IMMUTABLE,
+      .BindFlags           = D3D11_BIND_SHADER_RESOURCE,
+      .CPUAccessFlags      = 0,
+      .MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
+      .StructureByteStride = sizeof(RT_Quad)};
+
+  hr = gD3d.device->CreateBuffer(&quads_desc, &qs_data, &gD3d.rt_pipeline->gpu_quads);
+  d3d_check_hresult_(hr);
+  */
+
+  // Materials
+  //
+  ::D3D11_BUFFER_DESC const materials_desc = {
+      .ByteWidth = gD3d.rt_pipeline->constants.num_materials * sizeof(RT_Material),
+      .Usage     = D3D11_USAGE_IMMUTABLE,
+      .BindFlags = D3D11_BIND_SHADER_RESOURCE,
+      .CPUAccessFlags      = 0,
+      .MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
+      .StructureByteStride = sizeof(RT_Material)};
+
+  hr = gD3d.device->CreateBuffer(
+      &materials_desc, &ms_data, &gD3d.rt_pipeline->gpu_materials);
+  d3d_check_hresult_(hr);
+}
+
+void
+gfx_rt_create_rt_world_srvs_or_panic() {
+  ::D3D11_SHADER_RESOURCE_VIEW_DESC const sp_desc = {
+      .Format        = DXGI_FORMAT_UNKNOWN,
+      .ViewDimension = D3D11_SRV_DIMENSION_BUFFER,
+      .Buffer        = {.FirstElement = 0,
+                        .NumElements  = (::UINT)gD3d.rt_pipeline->constants.num_spheres}};
+
+  ::D3D11_SHADER_RESOURCE_VIEW_DESC const qs_desc = {
+      .Format        = DXGI_FORMAT_UNKNOWN,
+      .ViewDimension = D3D11_SRV_DIMENSION_BUFFER,
+      .Buffer        = {.FirstElement = 0,
+                        .NumElements  = (::UINT)gD3d.rt_pipeline->constants.num_quads}};
+
+  ::D3D11_SHADER_RESOURCE_VIEW_DESC const ms_desc = {
+      .Format        = DXGI_FORMAT_UNKNOWN,
+      .ViewDimension = D3D11_SRV_DIMENSION_BUFFER,
+      .Buffer        = {.FirstElement = 0,
+                        .NumElements  = (::UINT)gD3d.rt_pipeline->constants.num_materials}};
+
+  ::HRESULT hr;
+
+  hr = gD3d.device->CreateShaderResourceView(
+      gD3d.rt_pipeline->gpu_spheres, &sp_desc, &(gD3d.rt_pipeline->gpu_spheres_view));
+  d3d_check_hresult_(hr);
+
+  /*
+    hr = gD3d.device->CreateShaderResourceView(
+        gD3d.rt_pipeline->gpu_quads, &qs_desc, &(gD3d.rt_pipeline->gpu_quads_view));
+    d3d_check_hresult_(hr);
+  */
+
+  hr = gD3d.device->CreateShaderResourceView(gD3d.rt_pipeline->gpu_materials,
+                                             &ms_desc,
+                                             &(gD3d.rt_pipeline->gpu_materials_view));
   d3d_check_hresult_(hr);
 }
 } // namespace rt
