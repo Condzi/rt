@@ -1,21 +1,75 @@
 namespace rt {
+//
+//  Compute shader related types.
+//
+
 struct alignas(16) RT_Constants {
-  Vec4 color;
+  // Quality
+  //
+  s32 num_samples;
+  s32 num_reflections;
+
+  // Buffers sizes
+  //
+  s32 num_spheres;
+  s32 num_quads;
+  s32 num_materials;
+
+  // Camera properties
+  //
+  Vec3 origin;
+  Vec3 horizontal;
+  Vec3 vertical;
+  Vec3 lower_left_corner;
+  Vec3 u, v, w;
+  f32  lens_radius;
+};
+
+struct RT_Sphere {
+  Vec3 center;
+  f32  radius;
+
+  Material_ID mat_id;
+};
+
+struct RT_Quad {
+  Vec3 normal;
+  f32  D;
+  Vec3 w;
+
+  Material_ID mat_id;
+};
+
+struct RT_Material {
+  u32  type;
+  Vec3 albedo;           // Common among multiple material types
+  f32  fuzz;             // Only used in Metal
+  f32  refraction_index; // Only used in Dielectric
 };
 
 struct RT_Pipeline {
   ::IComputeShader       *cs  = NULL;
   ::IUnorderedAccessView *uav = NULL;
   ::ITexture2D           *tex = NULL;
-  // Set once -- containts the world state for ray tracing.
-  ::IBuffer *consts = NULL;
 
-  RT_Constants            constants;
+  ::IBuffer *gpu_consts    = NULL;
+  ::IBuffer *gpu_spheres   = NULL;
+  ::IBuffer *gpu_quads     = NULL;
+  ::IBuffer *gpu_materials = NULL;
+
+  RT_Constants constants;
+
+  RT_Sphere   *spheres   = NULL;
+  RT_Quad     *quads     = NULL;
+  RT_Material *materials = NULL;
 };
 
 //
 //  Helper functions
 //
+
+void
+gfx_rt_set_up_shader_world(GFX_RT_Input const &in);
 
 void
 gfx_rt_load_and_compile_shader_or_panic();
@@ -35,12 +89,9 @@ gfx_rt_create_constants_buffer_or_panic();
 
 void
 gfx_rt_init_or_panic(GFX_RT_Input const &in) {
-  (void)in;
-
   gD3d.rt_pipeline = perm<RT_Pipeline>();
 
-  gD3d.rt_pipeline->constants.color = Vec4 {1, 0, 1, 1};
-
+  gfx_rt_set_up_shader_world(in);
   gfx_rt_load_and_compile_shader_or_panic();
   gfx_rt_create_output_texture_or_panic();
   gfx_rt_create_uav_or_panic();
@@ -49,14 +100,14 @@ gfx_rt_init_or_panic(GFX_RT_Input const &in) {
 
 void
 gfx_rt_start() {
-  gD3d.device_context->CSSetConstantBuffers(0, 1, &(gD3d.rt_pipeline->consts));
+  gD3d.device_context->CSSetConstantBuffers(0, 1, &(gD3d.rt_pipeline->gpu_consts));
   gD3d.device_context->CSSetUnorderedAccessViews(
       0, 1, &(gD3d.rt_pipeline->uav), NULL);
   gD3d.device_context->CSSetShader(gD3d.rt_pipeline->cs, NULL, 0);
   // 512 -- Image size, 16 -- sectors? I guess 16 is not relevant for our use case,
   // should be just image_size instead?
   //
-  gD3d.device_context->Dispatch(512 / 16, 512 / 16, 1);
+  gD3d.device_context->Dispatch(512, 512, 1);
 
   // Unbind the constant buffer
   //
@@ -86,6 +137,75 @@ gfx_rt_output_as_imgui_texture() {
 //
 //  Helper functions
 //
+
+void
+gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
+  RT_Constants &rcs = gD3d.rt_pipeline->constants;
+
+  rcs = {.num_samples     = 100,
+         .num_reflections = 50,
+
+         .num_spheres   = in.w.num_spheres,
+         .num_quads     = in.w.num_quads,
+         .num_materials = (s32)in.w.materials.size(),
+
+         .origin            = in.c.origin,
+         .horizontal        = in.c.horizontal,
+         .vertical          = in.c.vertical,
+         .lower_left_corner = in.c.lower_left_corner,
+         .u                 = in.c.u,
+         .v                 = in.c.v,
+         .w                 = in.c.w,
+         .lens_radius       = in.c.lens_radius};
+
+  gD3d.rt_pipeline->spheres = perm<RT_Sphere>(rcs.num_spheres);
+  for (s32 i = 0; i < rcs.num_spheres; i++) {
+    gD3d.rt_pipeline->spheres[i] = {.center = in.w.spheres[i].center,
+                                    .radius = in.w.spheres[i].radius,
+                                    .mat_id = in.w.spheres[i].mat_id};
+  }
+
+  gD3d.rt_pipeline->quads = perm<RT_Quad>(rcs.num_quads);
+  for (s32 i = 0; i < rcs.num_quads; i++) {
+    gD3d.rt_pipeline->quads[i] = {.normal = in.w.quads[i].normal,
+                                  .D      = in.w.quads[i].D,
+                                  .w      = in.w.quads[i].w,
+                                  .mat_id = in.w.quads[i].mat_id};
+  }
+
+  gD3d.rt_pipeline->materials = perm<RT_Material>(rcs.num_materials);
+  for (s32 i = 0; i < rcs.num_materials; i++) {
+    Material const &m      = in.w.materials[i];
+    RT_Material     result = {.type = m.type};
+    // We need different values depending on the material type; this is
+    // because Compute Shaders do not support unions.
+    //
+    switch (m.type) {
+      case MaterialType_Lambertian: {
+        result.albedo = m.lambertian.albedo;
+      } break;
+
+      case MaterialType_Metal: {
+        result.albedo = m.metal.albedo;
+        result.fuzz   = m.metal.fuzz;
+      } break;
+
+      case MaterialType_Dielectric: {
+        result.refraction_index = m.dielectric.refraction_index;
+      } break;
+
+      case MaterialType_Diffuse_Light: {
+        result.albedo = m.diffuse_light.albedo;
+      } break;
+
+      default: {
+        assert(false);
+      }
+    }
+
+    gD3d.rt_pipeline->materials[i] = result;
+  }
+}
 
 void
 gfx_rt_load_and_compile_shader_or_panic() {
@@ -165,22 +285,14 @@ gfx_rt_create_uav_or_panic() {
 void
 gfx_rt_create_constants_buffer_or_panic() {
   ::D3D11_BUFFER_DESC const consts_desc = {.ByteWidth = sizeof(RT_Constants),
-                                           .Usage =
-                                               D3D11_USAGE_DYNAMIC, // @ToDo: static?
+                                           .Usage     = D3D11_USAGE_IMMUTABLE,
                                            .BindFlags = D3D11_BIND_CONSTANT_BUFFER,
-                                           .CPUAccessFlags = D3D11_CPU_ACCESS_WRITE};
-
+                                           .CPUAccessFlags = 0};
   ::HRESULT hr;
+  ::D3D11_SUBRESOURCE_DATA  cs_data {.pSysMem = &(gD3d.rt_pipeline->constants)};
 
-  hr = gD3d.device->CreateBuffer(&consts_desc, nullptr, &gD3d.rt_pipeline->consts);
+  hr = gD3d.device->CreateBuffer(
+      &consts_desc, &cs_data, &gD3d.rt_pipeline->gpu_consts);
   d3d_check_hresult_(hr);
-
-  ::D3D11_MAPPED_SUBRESOURCE cs_data = {0};
-  hr                                 = gD3d.device_context->Map(
-      gD3d.rt_pipeline->consts, 0, D3D11_MAP_WRITE_DISCARD, 0, &cs_data);
-  d3d_check_hresult_(hr);
-
-  mem_copy_(cs_data.pData, &(gD3d.rt_pipeline->constants), sizeof(RT_Constants));
-  gD3d.device_context->Unmap(gD3d.rt_pipeline->consts, 0);
 }
 } // namespace rt
