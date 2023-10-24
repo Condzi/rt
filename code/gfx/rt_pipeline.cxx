@@ -7,6 +7,9 @@ struct RT_Pipeline {
   ::IComputeShader       *cs  = NULL;
   ::IUnorderedAccessView *uav = NULL;
   ::ITexture2D           *tex = NULL;
+  // Set once -- containts the world state for ray tracing.
+  ::IBuffer *consts = NULL;
+
   RT_Constants            constants;
 };
 
@@ -23,6 +26,9 @@ gfx_rt_create_output_texture_or_panic();
 void
 gfx_rt_create_uav_or_panic();
 
+void
+gfx_rt_create_constants_buffer_or_panic();
+
 //
 //  Public functions
 //
@@ -33,17 +39,29 @@ gfx_rt_init_or_panic(GFX_RT_Input const &in) {
 
   gD3d.rt_pipeline = perm<RT_Pipeline>();
 
+  gD3d.rt_pipeline->constants.color = Vec4 {1, 0, 1, 1};
+
   gfx_rt_load_and_compile_shader_or_panic();
   gfx_rt_create_output_texture_or_panic();
   gfx_rt_create_uav_or_panic();
+  gfx_rt_create_constants_buffer_or_panic();
 }
 
 void
 gfx_rt_start() {
+  gD3d.device_context->CSSetConstantBuffers(0, 1, &(gD3d.rt_pipeline->consts));
   gD3d.device_context->CSSetUnorderedAccessViews(
       0, 1, &(gD3d.rt_pipeline->uav), NULL);
   gD3d.device_context->CSSetShader(gD3d.rt_pipeline->cs, NULL, 0);
+  // 512 -- Image size, 16 -- sectors? I guess 16 is not relevant for our use case,
+  // should be just image_size instead?
+  //
   gD3d.device_context->Dispatch(512 / 16, 512 / 16, 1);
+
+  // Unbind the constant buffer
+  //
+  ID3D11Buffer *nullBuffer = nullptr;
+  gD3d.device_context->CSSetConstantBuffers(0, 1, &nullBuffer);
 }
 
 [[nodiscard]] void *
@@ -142,5 +160,27 @@ gfx_rt_create_uav_or_panic() {
   hr = gD3d.device->CreateUnorderedAccessView(
       gD3d.rt_pipeline->tex, &desc, &(gD3d.rt_pipeline->uav));
   d3d_check_hresult_(hr);
+}
+
+void
+gfx_rt_create_constants_buffer_or_panic() {
+  ::D3D11_BUFFER_DESC const consts_desc = {.ByteWidth = sizeof(RT_Constants),
+                                           .Usage =
+                                               D3D11_USAGE_DYNAMIC, // @ToDo: static?
+                                           .BindFlags = D3D11_BIND_CONSTANT_BUFFER,
+                                           .CPUAccessFlags = D3D11_CPU_ACCESS_WRITE};
+
+  ::HRESULT hr;
+
+  hr = gD3d.device->CreateBuffer(&consts_desc, nullptr, &gD3d.rt_pipeline->consts);
+  d3d_check_hresult_(hr);
+
+  ::D3D11_MAPPED_SUBRESOURCE cs_data = {0};
+  hr                                 = gD3d.device_context->Map(
+      gD3d.rt_pipeline->consts, 0, D3D11_MAP_WRITE_DISCARD, 0, &cs_data);
+  d3d_check_hresult_(hr);
+
+  mem_copy_(cs_data.pData, &(gD3d.rt_pipeline->constants), sizeof(RT_Constants));
+  gD3d.device_context->Unmap(gD3d.rt_pipeline->consts, 0);
 }
 } // namespace rt
