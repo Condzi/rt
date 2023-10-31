@@ -4,6 +4,7 @@
 
 typedef float4 Vec4;
 typedef float3 Vec3;
+typedef float2 Vec2;
 typedef float  f32;
 typedef uint   u32;
 typedef int    s32;
@@ -76,6 +77,74 @@ cbuffer ConstantBuffer : register(b0)
 StructuredBuffer<Sphere>   spheres   : register(t0);
 // StructuredBuffer<Quad>     quads     : register(t1);
 StructuredBuffer<Material> materials : register(t2);
+
+//
+//  RNG
+//
+
+// https://github.com/D-K-E/raytracing-gl/blob/master/bin/media/shaders/compute07.comp#L18C1-L26C2
+f32 random_f32_in_range(Vec2 co) {
+  // random gen
+  f32 a = 12.9898;
+  f32 b = 78.233;
+  f32 c = 43758.5453;
+  f32 dt = dot(co.xy, Vec2(a, b));
+  f32 sn = fmod(dt, 3.14159265359); // PI in HLSL
+  return frac(sin(sn) * c);
+}
+
+f32 random_f32() {
+  return random_f32_in_range(Vec2(0, 1));
+}
+
+s32 random_s32_in_range(s32 min, s32 max) {
+  return (s32)random_f32_in_range(Vec2((f32)min, (f32)max));
+}
+
+Vec3 random_vec3() {
+  return float3(random_f32(), random_f32(), random_f32());
+}
+
+Vec3 random_vec3_in_range(f32 min, f32 max) {
+  return random_vec3() * (max - min) + float3(min, min, min);
+}
+
+f32 len_sq(Vec3 v) {
+  return dot(v, v);
+}
+
+Vec3 random_in_unit_sphere() {
+  [loop]
+  while (true) {
+    Vec3 pt = random_vec3();
+    if (len_sq(pt) >= 1) {
+      continue;
+    }
+    return pt;
+  }
+}
+
+Vec3 random_unit_vector() {
+  return normalize(random_in_unit_sphere());
+}
+
+Vec3 random_in_hemisphere(Vec3 normal) {
+  Vec3 in_unit_sphere = random_in_unit_sphere();
+  f32 d = dot(in_unit_sphere, normal);
+  return (d > 0.0) ? in_unit_sphere : -in_unit_sphere;
+}
+
+Vec3 random_in_unit_disk() {
+  [loop]
+  while (true) {
+    Vec3 p = float3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
+    if (len_sq(p) >= 1) {
+      continue;
+    }
+    return p;
+  }
+}
+
 
 [numthreads(16, 16, 1)]
 void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)

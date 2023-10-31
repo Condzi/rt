@@ -94,7 +94,7 @@ main(void) {
       std::chrono::high_resolution_clock::now();
 
   Rt_Output rt_out = do_ray_tracing();
-  gfx_rt_start();
+  //gfx_rt_start();
   // @Note: we need to unbind the uav because we can't write and read at the same time
   ID3D11UnorderedAccessView* nullUAV = NULL;
   gD3d.device_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, NULL);

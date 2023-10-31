@@ -24,13 +24,17 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
 - [ ] Compute Shaders
   - [X] pipeline setup, first shader that outputs a simple texture
   - [X] use indices instead of pointer to the materials in code
-  - [ ] pack and send RT data to GPU
-  - [ ] port CPU code to GPU (should be easy, since we hae this rt_loop_balanced already)
-  - [ ] separate cpu and gpu code
+  - [X] pack and send RT data to GPU
+  - [ ] port CPU code to GPU (should be easy, since we have this rt_loop_balanced already)
+    - [?] random number generation
+    - [ ] Ray, Hit Info
+    - [ ] hit_sphere
+    - [ ] materials functions
+    - [ ] actual detection loop
+
 
 @todo: be more specific
 - [ ] 3D models form quads
-
 
 # October
 Writing the thesis document.
