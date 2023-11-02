@@ -165,8 +165,8 @@ void
 gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
   RT_Constants &rcs = gD3d.rt_pipeline->constants;
 
-  rcs = {.num_samples     = 100,
-         .num_reflections = 50,
+  rcs = {.num_samples     = 1, // @Unused
+         .num_reflections = 5,
 
          .num_spheres   = in.w.num_spheres,
          .num_quads     = in.w.num_quads,
@@ -180,7 +180,7 @@ gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
          .v                 = in.c.v,
          .w                 = in.c.w,
          .lens_radius       = in.c.lens_radius};
-
+  
   gD3d.rt_pipeline->spheres = perm<RT_Sphere>(rcs.num_spheres);
   for (s32 i = 0; i < rcs.num_spheres; i++) {
     gD3d.rt_pipeline->spheres[i] = {.center = in.w.spheres[i].center,

@@ -95,6 +95,7 @@ main(void) {
 
   Rt_Output rt_out = do_ray_tracing();
   gfx_rt_start();
+ // std::this_thread::sleep_for(std::chrono::seconds(50));
   // @Note: we need to unbind the uav because we can't write and read at the same time
   ID3D11UnorderedAccessView* nullUAV = NULL;
   gD3d.device_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, NULL);

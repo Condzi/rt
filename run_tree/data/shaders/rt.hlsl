@@ -61,14 +61,12 @@ struct Quad {
 struct Ray {
   Vec3 origin;
   Vec3 direction;
-  Vec3 direction_inv;
 };
 
 Ray make_ray(Vec3 o, Vec3 dir) {
   Ray r;
   r.origin = o;
   r.direction = dir;
-  r.direction_inv = 1/dir;
 
   return r;
 }
@@ -85,6 +83,18 @@ struct Hit_Info {
   f32         t;
   bool        front_face;
 };
+
+// empty hit info struct for correctness
+Hit_Info make_hit_info() {
+  Hit_Info hi;
+  hi.mat_id = 0;
+  hi.p = Vec3(0,0,0);
+  hi.normal = Vec3(0,0,0);
+  hi.t = 0;
+  hi.front_face = false;
+
+  return hi;
+}
 
 // Declare the UAV for output.
 //
@@ -127,7 +137,7 @@ f32 random_f32_in_range(Vec2 co) {
   f32 b = 78.233;
   f32 c = 43758.5453;
   f32 dt = dot(co.xy, Vec2(a, b));
-  f32 sn = fmod(dt, 3.14159265359); // PI in HLSL
+  f32 sn = fmod(dt, 3.14159265359);
   return frac(sin(sn) * c);
 }
 
@@ -153,9 +163,9 @@ f32 len_sq(Vec3 v) {
 
 Vec3 random_in_unit_sphere() {
   Vec3 pt = random_vec3();
-  while (len_sq(pt) >= 1) {
-    pt = random_vec3();
-  }
+  //while (len_sq(pt) >= 1) {
+  //  pt = random_vec3();
+  //}
   return pt;
 }
 
@@ -163,17 +173,11 @@ Vec3 random_unit_vector() {
   return normalize(random_in_unit_sphere());
 }
 
-Vec3 random_in_hemisphere(Vec3 normal) {
-  Vec3 in_unit_sphere = random_in_unit_sphere();
-  f32 d = dot(in_unit_sphere, normal);
-  return (d > 0.0) ? in_unit_sphere : -in_unit_sphere;
-}
-
 Vec3 random_in_unit_disk() {
   Vec3 p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
-  while (len_sq(p) >= 1) {
-    p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
-  }
+  //while (len_sq(p) >= 1) {
+  //  p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
+  //}
   return p;
 }
 
@@ -183,6 +187,7 @@ Vec3 random_in_unit_disk() {
 
 Ray
 get_ray_at(f32 s, f32 t) {
+  /*
   const Vec3 rd     = random_in_unit_disk() * cam_lens_radius;
   const Vec3 offset = cam_u * rd.x + cam_v * rd.y;
 
@@ -191,6 +196,11 @@ get_ray_at(f32 s, f32 t) {
                          cam_vertical * t - cam_origin - offset;
 
   return make_ray(origin, direction);
+  */
+
+  Vec3 r_origin = cam_origin;
+  Vec3 r_dir = cam_lower_left_corner + (s * cam_horizontal) + (t * cam_vertical) - r_origin;
+  return make_ray(r_origin, r_dir);
 }
 
 //
@@ -290,6 +300,9 @@ bool scatter(const Material material,
              const Hit_Info hi,
              out Vec3 attenuation_color,
              out Ray out_ray) {
+  attenuation_color = Vec3(0,0,0);
+  out_ray.origin = Vec3(0,0,0);
+  out_ray.direction = Vec3(0,0,0);
 
   switch (material.type) {
     case MaterialType_Lambertian: {
@@ -305,10 +318,9 @@ bool scatter(const Material material,
     } break;
 
     default: {
-      return false;
-    }
+    } break;
   }
-  return true;
+  return false;
 }
 
 Vec3
@@ -366,9 +378,12 @@ hit_sphere(const Ray r, const Sphere s, f32 t_min, f32 t_max, out Hit_Info hi) {
 
 bool hit_scene(const Ray r, float tmin, float tmax, out Hit_Info hi) {
   // check if sphere is hit
-  Hit_Info temp;
+  Hit_Info temp = make_hit_info();
   bool hit_ = false;
   float current_closest = tmax;
+
+  hi = temp;
+  [loop]
   for (int i = 0; i < num_spheres; i++) {
     if (hit_sphere(r, spheres[i], tmin, current_closest, temp)) {
       hit_ = true;
@@ -381,28 +396,25 @@ bool hit_scene(const Ray r, float tmin, float tmax, out Hit_Info hi) {
 
 Vec3 ray_color(const Ray r_in, int depth) {
   const Vec3 background_color = Vec3(0.5f, 0.7f, 1.0f);
-  Hit_Info hi;
+  Hit_Info hi = make_hit_info();
   Vec3 final_color = Vec3(1, 1, 1);
+  Ray current_ray = r_in;
 
-  while (true) {
-    if (depth <= 0) {
-      break;
-    }
-    if (!hit_scene(r_in, 0.001f, INFINITY, hi)) {
+  for (int i = 0; i < depth; ++i) {
+    if (!hit_scene(r_in, 0.001f, 99999.f, hi)) {
       return background_color;
     }
 
-    depth--;
-
-    Ray scattered;
-    Vec3 attenuated_color;
-    Vec3 emission = emit(materials[hi.mat_id]);
-    if (!scatter(materials[hi.mat_id], r_in, hi, attenuated_color, scattered)) {
-      return emission;
+    Ray scattered = r_in;
+    Vec3 attenuated_color = Vec3(0,0,0);
+    if (!scatter(materials[hi.mat_id], current_ray, hi, attenuated_color, scattered)) {
+      return background_color;
     }
 
+    current_ray = scattered;
+
     Vec3 color_from_scatter = attenuated_color*final_color;
-    final_color = color_from_scatter + emission;
+    final_color = color_from_scatter;
   }
 
   return final_color;
@@ -414,19 +426,15 @@ void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, ui
   uint2 id = uint2(DTid.x, DTid.y); // 2D index for 2D texture
   output[id] = float4(id.x/512.f, id.y/512.f, 1, 1);
 
-  Vec3 pixel_color = Vec3(0, 0, 0);
-  for (s32 k = 0; k < num_samples; k++) {
-    f32 u = (f32(id.x) + random_f32()) / (IMG_WIDTH - 1);
-    f32 v = (f32(id.y) + random_f32()) / (IMG_HEIGHT - 1);
+  f32 u = f32(id.x);
+  f32 v = f32(id.y);
+  Ray r       = get_ray_at(u, v);
+  Vec3 pixel_color = ray_color(r, 1);
 
-    Ray r       = get_ray_at(u, v);
-    pixel_color = pixel_color + ray_color(r, num_reflections);
-  }
-
-  pixel_color = pixel_color * (1.f / num_samples);
+//  pixel_color = pixel_color * (1.f / num_samples);
   pixel_color = Vec3(sqrt(pixel_color.r),
-                      sqrt(pixel_color.g),
-                      sqrt(pixel_color.b));
+                     sqrt(pixel_color.g),
+                     sqrt(pixel_color.b));
   pixel_color = saturate(pixel_color);
 
   output[id] = Vec4(pixel_color, 1);

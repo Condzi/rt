@@ -34,7 +34,8 @@ using IShaderResourceView  = ::ID3D11ShaderResourceView;
                                                                                      \
       logf("[D3D] !!! %s:%d -- ", __FILE__, (s32)__LINE__);                          \
       logf("%.*s\n", (s32)error_str.count, error_str.data);                          \
-                                                                                     \
-      errf("Failed to initialize DirectX 11.");                                      \
+      HRESULT rem_reason = gD3d.device->GetDeviceRemovedReason();                    \
+      errf("Failed to initialize DirectX 11. Device removed reason: 0x%X",           \
+           (int)rem_reason);                                                         \
     }                                                                                \
   } while (false)
