@@ -241,8 +241,8 @@ rt_loop_balanced(s32               max_row,
 
 [[nodiscard]] Rt_Output
 do_ray_tracing() {
-  f32 const aspect_ratio = 3 / 2.f;
-  s32 const image_width  = 1000;
+  f32 const aspect_ratio = 1;
+  s32 const image_width  = 512;
   s32 const image_height = (s32)(image_width / aspect_ratio);
 
   // Camera setup

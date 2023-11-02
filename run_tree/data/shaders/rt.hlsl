@@ -163,9 +163,9 @@ f32 len_sq(Vec3 v) {
 
 Vec3 random_in_unit_sphere() {
   Vec3 pt = random_vec3();
-  //while (len_sq(pt) >= 1) {
-  //  pt = random_vec3();
-  //}
+  while (len_sq(pt) >= 1) {
+    pt = random_vec3();
+  }
   return pt;
 }
 
@@ -175,9 +175,9 @@ Vec3 random_unit_vector() {
 
 Vec3 random_in_unit_disk() {
   Vec3 p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
-  //while (len_sq(p) >= 1) {
-  //  p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
-  //}
+  while (len_sq(p) >= 1) {
+    p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
+  }
   return p;
 }
 
@@ -187,7 +187,6 @@ Vec3 random_in_unit_disk() {
 
 Ray
 get_ray_at(f32 s, f32 t) {
-  /*
   const Vec3 rd     = random_in_unit_disk() * cam_lens_radius;
   const Vec3 offset = cam_u * rd.x + cam_v * rd.y;
 
@@ -196,11 +195,12 @@ get_ray_at(f32 s, f32 t) {
                          cam_vertical * t - cam_origin - offset;
 
   return make_ray(origin, direction);
-  */
+/*
 
   Vec3 r_origin = cam_origin;
   Vec3 r_dir = cam_lower_left_corner + (s * cam_horizontal) + (t * cam_vertical) - r_origin;
   return make_ray(r_origin, r_dir);
+  */
 }
 
 //
@@ -383,7 +383,6 @@ bool hit_scene(const Ray r, float tmin, float tmax, out Hit_Info hi) {
   float current_closest = tmax;
 
   hi = temp;
-  [loop]
   for (int i = 0; i < num_spheres; i++) {
     if (hit_sphere(r, spheres[i], tmin, current_closest, temp)) {
       hit_ = true;
@@ -401,20 +400,24 @@ Vec3 ray_color(const Ray r_in, int depth) {
   Ray current_ray = r_in;
 
   for (int i = 0; i < depth; ++i) {
-    if (!hit_scene(r_in, 0.001f, 99999.f, hi)) {
-      return background_color;
+    if (!hit_scene(r_in, 0.001f, INFINITY, hi)) {
+      final_color = final_color*background_color;
+      break;
     }
 
     Ray scattered = r_in;
     Vec3 attenuated_color = Vec3(0,0,0);
+    Vec3 emitted = emit(materials[hi.mat_id]);
     if (!scatter(materials[hi.mat_id], current_ray, hi, attenuated_color, scattered)) {
-      return background_color;
+      
+      final_color = final_color*emitted;
+    } else {
+      Vec3 color_from_scatter = attenuated_color*final_color;
+      final_color = color_from_scatter;
     }
 
     current_ray = scattered;
 
-    Vec3 color_from_scatter = attenuated_color*final_color;
-    final_color = color_from_scatter;
   }
 
   return final_color;
@@ -426,8 +429,8 @@ void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, ui
   uint2 id = uint2(DTid.x, DTid.y); // 2D index for 2D texture
   output[id] = float4(id.x/512.f, id.y/512.f, 1, 1);
 
-  f32 u = f32(id.x);
-  f32 v = f32(id.y);
+  f32 u = f32(id.x)/511;
+  f32 v = f32(id.y)/511;
   Ray r       = get_ray_at(u, v);
   Vec3 pixel_color = ray_color(r, 1);
 
