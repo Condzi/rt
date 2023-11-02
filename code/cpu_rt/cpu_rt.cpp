@@ -282,7 +282,7 @@ do_ray_tracing() {
 
   // @Todo: fix me
   {
-    GFX_RT_Input in {
+    static GFX_RT_Input in {
         .im_size = {(f32)image_width, (f32)image_height}, .w = w, .c = cam};
     gfx_rt_init_or_panic(in);
   }

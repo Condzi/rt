@@ -111,6 +111,7 @@ cbuffer ConstantBuffer : register(b0)
   //
   s32 num_spheres;
   s32 num_quads;
+  s32 num_materials;
 
   // Camera properties
   //
@@ -187,6 +188,14 @@ Vec3 random_in_unit_disk() {
 
 Ray
 get_ray_at(f32 s, f32 t) {
+  /*
+
+  Vec3 rd = cam_lens_radius * random_in_unit_disk();
+  Vec3 offst = cam_u * rd.x + cam_v * rd.y;
+  Vec3 r_origin = cam_origin + offst;
+  Vec3 r_dir = cam_lower_left_corner + (s * cam_horizontal) + (t * cam_vertical) - r_origin;
+  return make_ray(r_origin, r_dir);
+  */
   const Vec3 rd     = random_in_unit_disk() * cam_lens_radius;
   const Vec3 offset = cam_u * rd.x + cam_v * rd.y;
 
@@ -337,6 +346,7 @@ emit(const Material material) {
 //
 bool
 hit_sphere(const Ray r, const Sphere s, f32 t_min, f32 t_max, out Hit_Info hi) {
+  hi = make_hit_info();
   Vec3 oc = r.origin - s.center;
 
   // Inline len_sq and dot
@@ -393,6 +403,42 @@ bool hit_scene(const Ray r, float tmin, float tmax, out Hit_Info hi) {
   return hit_;
 }
 
+Vec3 ray_color(Ray r, int depth) {
+  //
+  Ray r_in;
+  r_in.origin = r.origin;
+  r_in.direction = r.direction;
+  Vec3 bcolor = Vec3(1,1,1);
+
+  while (true) {
+    if (depth <= 0) {
+      //
+      return Vec3(0,0,0);
+      // return bcolor;
+    }
+    Hit_Info hi = make_hit_info();
+    if (hit_scene(r_in, 0.001, INFINITY, hi)) {
+      Ray r_out;
+      Vec3 atten;
+      if (scatter(materials[hi.mat_id], r_in, hi, atten, r_out)) {
+        r_in = r_out;
+        bcolor *= atten;
+        depth--;
+      } else {
+        return Vec3(0,0,0);
+      }
+    } else {
+      Vec3 dir = normalize(r_in.direction);
+      float temp = 0.5 * (dir.y + 1.0);
+      bcolor *= Vec3(1.0 - temp, 1.0 - temp, 1.0 - temp) + temp * Vec3(0.5, 0.7, 1.0);
+      return bcolor;
+    }
+  }
+  return bcolor;
+}
+
+/*
+
 Vec3 ray_color(const Ray r_in, int depth) {
   const Vec3 background_color = Vec3(0.5f, 0.7f, 1.0f);
   Hit_Info hi = make_hit_info();
@@ -409,7 +455,6 @@ Vec3 ray_color(const Ray r_in, int depth) {
     Vec3 attenuated_color = Vec3(0,0,0);
     Vec3 emitted = emit(materials[hi.mat_id]);
     if (!scatter(materials[hi.mat_id], current_ray, hi, attenuated_color, scattered)) {
-      
       final_color = final_color*emitted;
     } else {
       Vec3 color_from_scatter = attenuated_color*final_color;
@@ -422,23 +467,27 @@ Vec3 ray_color(const Ray r_in, int depth) {
 
   return final_color;
 }
+*/
 
 [numthreads(16, 16, 1)]
 void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)
 {
   uint2 id = uint2(DTid.x, DTid.y); // 2D index for 2D texture
   output[id] = float4(id.x/512.f, id.y/512.f, 1, 1);
+  Vec3 pixel_color = Vec3(0,0,0);
+  
+  for (int i = 0; i < num_samples; i++) {
+    f32 u = (f32(id.x) + random_f32())/(IMG_WIDTH - 1);
+    f32 v = (f32(id.y) + random_f32())/(IMG_HEIGHT - 1);
+    Ray r       = get_ray_at(u, v);
+    pixel_color = pixel_color + ray_color(r, num_reflections);
+  }
 
-  f32 u = f32(id.x)/511;
-  f32 v = f32(id.y)/511;
-  Ray r       = get_ray_at(u, v);
-  Vec3 pixel_color = ray_color(r, 1);
-
-//  pixel_color = pixel_color * (1.f / num_samples);
+  pixel_color = pixel_color * (1.f / num_samples);
   pixel_color = Vec3(sqrt(pixel_color.r),
                      sqrt(pixel_color.g),
                      sqrt(pixel_color.b));
-  pixel_color = saturate(pixel_color);
+  //pixel_color = saturate(pixel_color);
 
   output[id] = Vec4(pixel_color, 1);
 }
