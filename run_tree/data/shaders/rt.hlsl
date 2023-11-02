@@ -9,6 +9,14 @@ typedef float  f32;
 typedef uint   u32;
 typedef int    s32;
 
+// HLSL does not have infinity constant.
+//
+static const float INFINITY = 1. / 0.;
+
+// @ToDo: This should be in the constant buffer
+#define IMG_WIDTH 512
+#define IMG_HEIGHT 512
+
 //
 //  MATERIALS
 //
@@ -63,6 +71,11 @@ Ray make_ray(Vec3 o, Vec3 dir) {
   r.direction_inv = 1/dir;
 
   return r;
+}
+
+Vec3
+at(Ray r, f32 t) {
+  return r.origin + r.direction * t;
 }
 
 struct Hit_Info {
@@ -170,10 +183,224 @@ Vec3 random_in_unit_disk() {
   }
 }
 
+//
+//  Materials
+//
+
+// Helper math functions
+Vec3 reflect(Vec3 v, Vec3 n) {
+  return v - n * 2 * dot(v, n);
+}
+
+Vec3 refract(Vec3 uv, Vec3 n, f32 etai_over_etat) {
+  f32 cos_theta = min(dot(-uv, n), 1.0);
+  Vec3 r_out_perp = (uv + n * cos_theta) * etai_over_etat;
+  Vec3 r_out_parallel = n * (-sqrt(abs(1.0 - dot(r_out_perp, r_out_perp))));
+
+  return r_out_perp + r_out_parallel;
+}
+
+f32 reflectance(f32 cosine, f32 refraction_index) {
+  f32 r0 = (1 - refraction_index) / (1 + refraction_index);
+  r0 = r0 * r0;
+
+  return r0 + (1 - r0) * pow((1 - cosine), 5);
+}
+
+/**
+ * Specializations for different materials
+ */
+
+bool scatter_lambertian(const Material material,
+                        const Hit_Info hi,
+                        out Vec3 attenuation_color,
+                        out Ray out_ray) {
+  Vec3 scatter_direction = hi.normal + random_unit_vector();
+  //if (near_zero(scatter_direction)) {
+  if (len_sq(scatter_direction) < 0.001f) {
+    scatter_direction = hi.normal;
+  }
+
+  out_ray = make_ray(hi.p, scatter_direction);
+  attenuation_color = material.albedo;
+
+  return true;
+}
+
+bool scatter_metal(const Material material,
+                   const Ray in_ray,
+                   const Hit_Info hi,
+                   out Vec3 attenuation_color,
+                   out Ray out_ray) {
+  Vec3 reflected = reflect(normalize(in_ray.direction), hi.normal);
+  Vec3 direction = reflected + random_in_unit_sphere() * material.fuzz;
+  out_ray = make_ray(hi.p, direction);
+
+  attenuation_color = material.albedo;
+  return (dot(out_ray.direction, hi.normal) > 0);
+}
+
+bool scatter_dielectric(const Material material,
+                        const Ray in_ray,
+                        const Hit_Info hi,
+                        out Vec3 attenuation_color,
+                        out Ray out_ray) {
+  f32 refraction_ratio = hi.front_face ? (1.0f / material.refraction_index)
+                                       : material.refraction_index;
+
+  Vec3 unit_direction = normalize(in_ray.direction);
+  f32 cos_theta = min(dot(-unit_direction, hi.normal), 1.0);
+  f32 sin_theta = sqrt(1.0f - cos_theta * cos_theta);
+
+  bool can_refract = (refraction_ratio * sin_theta) <= 1.0f;
+  bool reflectance_test = reflectance(cos_theta, refraction_ratio) > random_f32();
+
+  Vec3 direction;
+  if (can_refract && !reflectance_test) {
+    direction = refract(unit_direction, hi.normal, refraction_ratio);
+  } else {
+    direction = reflect(unit_direction, hi.normal);
+  }
+
+  out_ray = make_ray(hi.p, direction);
+  attenuation_color = float3(1.0f, 1.0f, 1.0f);
+
+  return true;
+}
+
+Vec3
+emit_diffuse_light(const Material material) {
+  return material.albedo;
+}
+
+
+// Actual scatter and emit definitions
+bool scatter(const Material material,
+             const Ray in_ray,
+             const Hit_Info hi,
+             out Vec3 attenuation_color,
+             out Ray out_ray) {
+
+  switch (material.type) {
+    case MaterialType_Lambertian: {
+      return scatter_lambertian(material, hi, attenuation_color, out_ray);
+    } break;
+
+    case MaterialType_Metal: {
+      return scatter_metal(material, in_ray, hi, attenuation_color, out_ray);
+    } break;
+
+    case MaterialType_Dielectric: {
+      return scatter_dielectric(material, in_ray, hi, attenuation_color, out_ray);
+    } break;
+
+    default: {
+      return false;
+    }
+  }
+  return true;
+}
+
+Vec3
+emit(const Material material) {
+  if (material.type == MaterialType_Diffuse_Light) {
+    return emit_diffuse_light(material);
+  }
+
+  return Vec3(0, 0, 0);
+}
+
+//
+//  Ray intersection detection
+//
+bool
+hit_sphere(const Ray r, const Sphere s, f32 t_min, f32 t_max, out Hit_Info hi) {
+  Vec3 oc = r.origin - s.center;
+
+  // Inline len_sq and dot
+  // Hot \/\/
+  f32 a = r.direction.x * r.direction.x + r.direction.y * r.direction.y +
+          r.direction.z * r.direction.z;
+  f32 half_b = oc.x * r.direction.x + oc.y * r.direction.y + oc.z * r.direction.z;
+  f32 c      = oc.x * oc.x + oc.y * oc.y + oc.z * oc.z - s.radius * s.radius;
+  f32 discriminant = half_b * half_b - a * c;
+  // ^^ hot
+
+  f32 sd = sqrt(discriminant);
+
+  // Optimized root calculation
+  f32 root1 = (-half_b - sd) / a;
+  f32 root2 = (-half_b + sd) / a;
+  f32 root  = (root1 < t_max && root1 > t_min)   ? root1
+              : (root2 < t_max && root2 > t_min) ? root2
+                                                 : -1;
+
+  if (root == -1) return false;
+
+  hi.t = root;
+  hi.p = at(r, root);
+
+  f32  inv_radius     = 1 / s.radius;
+  Vec3 outward_normal = (hi.p - s.center) * inv_radius;
+
+  hi.front_face = (dot(r.direction, outward_normal) < 0);
+  hi.normal     = outward_normal * (hi.front_face ? 1.f : -1.f);
+  hi.mat_id     = s.mat_id;
+
+  return true;
+}
+
+//
+//  RT Logic
+//
+
+bool hit_scene(const Ray r, float tmin, float tmax, out Hit_Info hi) {
+  // check if sphere is hit
+  Hit_Info temp;
+  bool hit_ = false;
+  float current_closest = tmax;
+  for (int i = 0; i < num_spheres; i++) {
+    if (hit_sphere(r, spheres[i], tmin, current_closest, temp)) {
+      hit_ = true;
+      current_closest = temp.t;
+      hi = temp;
+    }
+  }
+  return hit_;
+}
+
+Vec3 ray_color(const Ray r_in, int depth) {
+  const Vec3 background_color = Vec3(0.5f, 0.7f, 1.0f);
+  Hit_Info hi;
+  Vec3 final_color = Vec3(1, 1, 1);
+
+  while (true) {
+    if (depth <= 0) {
+      break;
+    }
+    if (!hit_scene(r_in, 0.001f, INFINITY, hi)) {
+      return background_color;
+    }
+
+    depth--;
+
+    Ray scattered;
+    Vec3 attenuated_color;
+    Vec3 emission = emit(materials[hi.mat_id]);
+    if (!scatter(materials[hi.mat_id], r_in, hi, attenuated_color, scattered)) {
+      return emission;
+    }
+
+    Vec3 color_from_scatter = attenuated_color*final_color;
+    final_color = color_from_scatter + emission;
+  }
+
+  return final_color;
+}
 
 [numthreads(16, 16, 1)]
 void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)
 {
   uint2 id = uint2(DTid.x, DTid.y); // 2D index for 2D texture
-  output[id] = float4(1, 1, 1, 1);
+  output[id] = float4(id.x/512.f, id.y/512.f, 1, 1);
 }

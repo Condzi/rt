@@ -27,9 +27,9 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
   - [X] pack and send RT data to GPU
   - [ ] port CPU code to GPU (should be easy, since we have this rt_loop_balanced already)
     - [?] random number generation
-    - [ ] Ray, Hit Info
-    - [ ] hit_sphere
-    - [ ] materials functions
+    - [X] Ray, Hit Info
+    - [X] hit_sphere
+    - [X] materials functions
     - [ ] actual detection loop
 
 
