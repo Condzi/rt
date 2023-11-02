@@ -104,12 +104,12 @@ cbuffer ConstantBuffer : register(b0)
 
   // Camera properties
   //
-  Vec3 origin;
-  Vec3 horizontal;
-  Vec3 vertical;
-  Vec3 lower_left_corner;
-  Vec3 u, v, w;
-  f32  lens_radius;
+  Vec3 cam_origin;
+  Vec3 cam_horizontal;
+  Vec3 cam_vertical;
+  Vec3 cam_lower_left_corner;
+  Vec3 cam_u, cam_v, cam_w;
+  f32  cam_lens_radius;
 }
 
 StructuredBuffer<Sphere>   spheres   : register(t0);
@@ -152,14 +152,11 @@ f32 len_sq(Vec3 v) {
 }
 
 Vec3 random_in_unit_sphere() {
-  [loop]
-  while (true) {
-    Vec3 pt = random_vec3();
-    if (len_sq(pt) >= 1) {
-      continue;
-    }
-    return pt;
+  Vec3 pt = random_vec3();
+  while (len_sq(pt) >= 1) {
+    pt = random_vec3();
   }
+  return pt;
 }
 
 Vec3 random_unit_vector() {
@@ -173,14 +170,27 @@ Vec3 random_in_hemisphere(Vec3 normal) {
 }
 
 Vec3 random_in_unit_disk() {
-  [loop]
-  while (true) {
-    Vec3 p = float3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
-    if (len_sq(p) >= 1) {
-      continue;
-    }
-    return p;
+  Vec3 p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
+  while (len_sq(p) >= 1) {
+    p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
   }
+  return p;
+}
+
+//
+//  Camera
+//
+
+Ray
+get_ray_at(f32 s, f32 t) {
+  const Vec3 rd     = random_in_unit_disk() * cam_lens_radius;
+  const Vec3 offset = cam_u * rd.x + cam_v * rd.y;
+
+  const Vec3 origin    = cam_origin + offset;
+  const Vec3 direction = cam_lower_left_corner + cam_horizontal * s +
+                         cam_vertical * t - cam_origin - offset;
+
+  return make_ray(origin, direction);
 }
 
 //
@@ -403,4 +413,21 @@ void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, ui
 {
   uint2 id = uint2(DTid.x, DTid.y); // 2D index for 2D texture
   output[id] = float4(id.x/512.f, id.y/512.f, 1, 1);
+
+  Vec3 pixel_color = Vec3(0, 0, 0);
+  for (s32 k = 0; k < num_samples; k++) {
+    f32 u = (f32(id.x) + random_f32()) / (IMG_WIDTH - 1);
+    f32 v = (f32(id.y) + random_f32()) / (IMG_HEIGHT - 1);
+
+    Ray r       = get_ray_at(u, v);
+    pixel_color = pixel_color + ray_color(r, num_reflections);
+  }
+
+  pixel_color = pixel_color * (1.f / num_samples);
+  pixel_color = Vec3(sqrt(pixel_color.r),
+                      sqrt(pixel_color.g),
+                      sqrt(pixel_color.b));
+  pixel_color = saturate(pixel_color);
+
+  output[id] = Vec4(pixel_color, 1);
 }

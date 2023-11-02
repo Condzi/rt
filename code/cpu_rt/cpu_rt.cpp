@@ -291,7 +291,8 @@ do_ray_tracing() {
 
   u8 *buffer = perm<u8>(image_width * image_height * NUM_CHANNELS);
 
-  s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
+  //s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
+  s32 const num_of_threads_supported = 1;
 
   std::atomic_bool *thread_flags = new std::atomic_bool[num_of_threads_supported];
 
