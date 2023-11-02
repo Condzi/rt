@@ -47,6 +47,31 @@ struct Quad {
   Material_ID mat_id;
 };
 
+//
+//  Ray and Hit_Info
+//
+struct Ray {
+  Vec3 origin;
+  Vec3 direction;
+  Vec3 direction_inv;
+};
+
+Ray make_ray(Vec3 o, Vec3 dir) {
+  Ray r;
+  r.origin = o;
+  r.direction = dir;
+  r.direction_inv = 1/dir;
+
+  return r;
+}
+
+struct Hit_Info {
+  Material_ID mat_id;
+  Vec3        p;
+  Vec3        normal;
+  f32         t;
+  bool        front_face;
+};
 
 // Declare the UAV for output.
 //
