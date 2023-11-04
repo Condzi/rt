@@ -196,47 +196,14 @@ bool near_zero(Vec3 v) {
 
 Ray
 get_ray_at(inout uint rand_seed, f32 s, f32 t) {
-  /*
-
-  Vec3 rd = cam_lens_radius * random_in_unit_disk();
-  Vec3 offst = cam_u * rd.x + cam_v * rd.y;
-  Vec3 r_origin = cam_origin + offst;
-  Vec3 r_dir = cam_lower_left_corner + (s * cam_horizontal) + (t * cam_vertical) - r_origin;
-  return make_ray(r_origin, r_dir);
-  */
-  /*
-
-  const Vec3 c_origin = Vec3(13.000000, 2.000000, 3.000000);
-  const Vec3 c_horizontal = Vec3(1.189428, 0.000000, -5.154188);
-  const Vec3 c_vertical = Vec3(-0.764108, 5.231199, -0.176333);
-  const Vec3 c_lower_left_corner = Vec3(-1.667022, -2.839348, 2.329638);
-  const Vec3 c_u = Vec3(0.224860, 0.000000, -0.974391);
-  const Vec3 c_v = Vec3(-0.144453, 0.988950, -0.033335);
-  const Vec3 c_w = Vec3(0.963624, 0.148250, 0.222375);
-  const f32 c_lens_radius = 0.050000;
-
-  const Vec3 rd     = random_in_unit_disk(rand_seed) * c_lens_radius;
-  const Vec3 offset = c_u * rd.x + c_v * rd.y;
-
-  const Vec3 origin    = c_origin + offset;
-  const Vec3 direction = c_lower_left_corner + c_horizontal * s +
-                         c_vertical * t - c_origin;
-  */
-
   const Vec3 rd     = random_in_unit_disk(rand_seed) * cam_lens_radius;
-  const Vec3 offset = cam_u * rd.x + cam_v * rd.y;
+  const Vec3 offset = (cam_u * rd.x) + (cam_v * rd.y);
 
   const Vec3 origin    = cam_origin + offset;
-  const Vec3 direction = cam_lower_left_corner + cam_horizontal * s +
-                         cam_vertical * t - cam_origin;
+  const Vec3 direction = cam_lower_left_corner + (cam_horizontal * s) +
+                         (cam_vertical * t) - cam_origin - offset;
 
   return make_ray(origin, direction);
-/*
-
-  Vec3 r_origin = cam_origin;
-  Vec3 r_dir = cam_lower_left_corner + (s * cam_horizontal) + (t * cam_vertical) - r_origin;
-  return make_ray(r_origin, r_dir);
-  */
 }
 
 //
