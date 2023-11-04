@@ -112,6 +112,7 @@ cbuffer ConstantBuffer : register(b0)
   s32 num_spheres;
   s32 num_quads;
   s32 num_materials;
+  f32  cam_lens_radius;
 
   // Camera properties
   //
@@ -120,7 +121,6 @@ cbuffer ConstantBuffer : register(b0)
   Vec3 cam_vertical;
   Vec3 cam_lower_left_corner;
   Vec3 cam_u, cam_v, cam_w;
-  f32  cam_lens_radius;
 }
 
 StructuredBuffer<Sphere>   spheres   : register(t0);
@@ -204,6 +204,25 @@ get_ray_at(inout uint rand_seed, f32 s, f32 t) {
   Vec3 r_dir = cam_lower_left_corner + (s * cam_horizontal) + (t * cam_vertical) - r_origin;
   return make_ray(r_origin, r_dir);
   */
+  /*
+
+  const Vec3 c_origin = Vec3(13.000000, 2.000000, 3.000000);
+  const Vec3 c_horizontal = Vec3(1.189428, 0.000000, -5.154188);
+  const Vec3 c_vertical = Vec3(-0.764108, 5.231199, -0.176333);
+  const Vec3 c_lower_left_corner = Vec3(-1.667022, -2.839348, 2.329638);
+  const Vec3 c_u = Vec3(0.224860, 0.000000, -0.974391);
+  const Vec3 c_v = Vec3(-0.144453, 0.988950, -0.033335);
+  const Vec3 c_w = Vec3(0.963624, 0.148250, 0.222375);
+  const f32 c_lens_radius = 0.050000;
+
+  const Vec3 rd     = random_in_unit_disk(rand_seed) * c_lens_radius;
+  const Vec3 offset = c_u * rd.x + c_v * rd.y;
+
+  const Vec3 origin    = c_origin + offset;
+  const Vec3 direction = c_lower_left_corner + c_horizontal * s +
+                         c_vertical * t - c_origin;
+  */
+
   const Vec3 rd     = random_in_unit_disk(rand_seed) * cam_lens_radius;
   const Vec3 offset = cam_u * rd.x + cam_v * rd.y;
 
@@ -490,7 +509,7 @@ void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, ui
   
   for (int i = 0; i < num_samples; i++) {
     f32 u = (f32(id.x) + random_f32(rand_seed))/(IMG_WIDTH - 1);
-    f32 v = (f32(id.y) + random_f32(rand_seed))/(IMG_HEIGHT - 1);
+    f32 v = 1.0 - (f32(id.y) + random_f32(rand_seed))/(IMG_HEIGHT - 1);
     Ray r       = get_ray_at(rand_seed, u, v);
     pixel_color = pixel_color + ray_color(rand_seed, r, num_reflections);
   }

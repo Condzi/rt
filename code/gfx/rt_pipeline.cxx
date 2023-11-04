@@ -6,23 +6,27 @@ namespace rt {
 struct alignas(16) RT_Constants {
   // Quality
   //
-  s32 num_samples;
-  s32 num_reflections;
+  struct alignas(16) {
+    s32 num_samples;
+    s32 num_reflections;
+    // Buffers sizes
+    //
+    s32 num_spheres;
+    s32 num_quads;
+  };
 
-  // Buffers sizes
-  //
-  s32 num_spheres;
-  s32 num_quads;
-  s32 num_materials;
+  struct alignas(16) {
+    s32 num_materials;
+    f32 lens_radius;
+  };
 
   // Camera properties
   //
-  Vec3 origin;
-  Vec3 horizontal;
-  Vec3 vertical;
-  Vec3 lower_left_corner;
-  Vec3 u, v, w;
-  f32  lens_radius;
+  alignas(16) Vec3 origin;
+  alignas(16) Vec3 horizontal;
+  alignas(16) Vec3 vertical;
+  alignas(16) Vec3 lower_left_corner;
+  alignas(16) Vec3 u, v, w;
 };
 
 struct RT_Sphere {
@@ -165,12 +169,13 @@ void
 gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
   RT_Constants &rcs = gD3d.rt_pipeline->constants;
 
-  rcs = {.num_samples     = 100,
-         .num_reflections = 5,
+  rcs = {.num_samples     = 500,
+         .num_reflections = 50,
 
          .num_spheres   = in.w.num_spheres,
          .num_quads     = in.w.num_quads,
          .num_materials = (s32)in.w.materials.size(),
+         .lens_radius   = in.c.lens_radius,
 
          .origin            = in.c.origin,
          .horizontal        = in.c.horizontal,
@@ -178,8 +183,7 @@ gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
          .lower_left_corner = in.c.lower_left_corner,
          .u                 = in.c.u,
          .v                 = in.c.v,
-         .w                 = in.c.w,
-         .lens_radius       = in.c.lens_radius};
+         .w                 = in.c.w};
 
   gD3d.rt_pipeline->spheres = perm<RT_Sphere>(rcs.num_spheres);
   for (s32 i = 0; i < rcs.num_spheres; i++) {
