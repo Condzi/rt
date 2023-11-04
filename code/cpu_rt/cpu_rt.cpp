@@ -185,9 +185,9 @@ ray_color(World const &world, Ray const &r, std::vector<BVH_Flat> const& bvh, s3
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 500; // 500
+s32 const SAMPLES_PER_PIXEL = 10; // 500
 // @todo: move to ui
-s32 const MAX_DEPTH = 50; // 50
+s32 const MAX_DEPTH = 5; // 50
 
 f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
 

@@ -1,3 +1,8 @@
+// Enable discrite GPU
+//
+__declspec(dllexport) DWORD NvOptimusEnablement                = 0x00000001;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+
 /**
  * Typedefs of ID3D types to avoid interface versioning.
  * D3D have various updates with increasing numbers as sufixes

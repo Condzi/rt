@@ -126,7 +126,7 @@ gD3d.device_context->CSSetShaderResources(
   // 512 -- Image size, 16 -- sectors? I guess 16 is not relevant for our use case,
   // should be just image_size instead?
   //
-  gD3d.device_context->Dispatch(512, 512, 1);
+  gD3d.device_context->Dispatch(32, 32, 1);
 
   // Unbind buffers
   //
@@ -165,8 +165,8 @@ void
 gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
   RT_Constants &rcs = gD3d.rt_pipeline->constants;
 
-  rcs = {.num_samples     = 1, // @Unused
-         .num_reflections = 10,
+  rcs = {.num_samples     = 100,
+         .num_reflections = 5,
 
          .num_spheres   = in.w.num_spheres,
          .num_quads     = in.w.num_quads,
@@ -180,7 +180,7 @@ gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
          .v                 = in.c.v,
          .w                 = in.c.w,
          .lens_radius       = in.c.lens_radius};
-  
+
   gD3d.rt_pipeline->spheres = perm<RT_Sphere>(rcs.num_spheres);
   for (s32 i = 0; i < rcs.num_spheres; i++) {
     gD3d.rt_pipeline->spheres[i] = {.center = in.w.spheres[i].center,

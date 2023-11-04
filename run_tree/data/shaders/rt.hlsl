@@ -131,55 +131,63 @@ StructuredBuffer<Material> materials : register(t2);
 //  RNG
 //
 
-// https://github.com/D-K-E/raytracing-gl/blob/master/bin/media/shaders/compute07.comp#L18C1-L26C2
-f32 random_f32_in_range(Vec2 co) {
-  // random gen
-  f32 a = 12.9898;
-  f32 b = 78.233;
-  f32 c = 43758.5453;
-  f32 dt = dot(co.xy, Vec2(a, b));
-  f32 sn = fmod(dt, 3.14159265359);
-  return frac(sin(sn) * c);
+// RNG functions
+uint Rand(inout uint randSeed)
+{
+    randSeed = 1664525 * randSeed + 1013904223;
+    return randSeed;
 }
 
-f32 random_f32() {
-  return random_f32_in_range(Vec2(0, 1));
+float random_f32(inout uint randSeed)
+{
+    return Rand(randSeed) / 4294967296.0;
 }
 
-s32 random_s32_in_range(s32 min, s32 max) {
-  return (s32)random_f32_in_range(Vec2((f32)min, (f32)max));
+float random_f32_in_range(inout uint randSeed, float min, float max)
+{
+    return min + (max - min) * random_f32(randSeed);
 }
 
-Vec3 random_vec3() {
-  return float3(random_f32(), random_f32(), random_f32());
+Vec3 random_vec3(inout uint randSeed)
+{
+    return float3(random_f32(randSeed), random_f32(randSeed), random_f32(randSeed));
 }
 
-Vec3 random_vec3_in_range(f32 min, f32 max) {
-  return random_vec3() * (max - min) + float3(min, min, min);
+Vec3 random_in_unit_sphere(inout uint randSeed)
+{
+    Vec3 pt;
+    do {
+        pt = 2.0 * random_vec3(randSeed) - 1.0;
+    } while (dot(pt, pt) >= 1.0);
+    return pt;
 }
 
-f32 len_sq(Vec3 v) {
-  return dot(v, v);
+Vec3 random_unit_vector(inout uint randSeed)
+{
+    return normalize(random_in_unit_sphere(randSeed));
 }
 
-Vec3 random_in_unit_sphere() {
-  Vec3 pt = random_vec3();
-  while (len_sq(pt) >= 1) {
-    pt = random_vec3();
-  }
-  return pt;
+Vec3 random_in_unit_disk(inout uint randSeed)
+{
+    Vec3 p;
+    do {
+        p = 2.0 * float3(random_f32(randSeed), random_f32(randSeed), 0) - float3(1, 1, 0);
+    } while (dot(p, p) >= 1.0);
+    return p;
 }
 
-Vec3 random_unit_vector() {
-  return normalize(random_in_unit_sphere());
+//
+//  Math helpers
+//
+
+#define FLT_EPSILON      1.192092896e-07F        // smallest such that 1.0+FLT_EPSILON != 1.0
+bool f32_compare(f32 a, f32 b) {
+  return abs(a - b) < FLT_EPSILON;
 }
 
-Vec3 random_in_unit_disk() {
-  Vec3 p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
-  while (len_sq(p) >= 1) {
-    p = Vec3(random_f32_in_range(Vec2(-1, 1)), random_f32_in_range(Vec2(-1, 1)), 0);
-  }
-  return p;
+
+bool near_zero(Vec3 v) {
+  return f32_compare(v.x, 0) && f32_compare(v.y, 0) && f32_compare(v.z, 0);
 }
 
 //
@@ -187,7 +195,7 @@ Vec3 random_in_unit_disk() {
 //
 
 Ray
-get_ray_at(f32 s, f32 t) {
+get_ray_at(inout uint rand_seed, f32 s, f32 t) {
   /*
 
   Vec3 rd = cam_lens_radius * random_in_unit_disk();
@@ -196,12 +204,12 @@ get_ray_at(f32 s, f32 t) {
   Vec3 r_dir = cam_lower_left_corner + (s * cam_horizontal) + (t * cam_vertical) - r_origin;
   return make_ray(r_origin, r_dir);
   */
-  const Vec3 rd     = random_in_unit_disk() * cam_lens_radius;
+  const Vec3 rd     = random_in_unit_disk(rand_seed) * cam_lens_radius;
   const Vec3 offset = cam_u * rd.x + cam_v * rd.y;
 
   const Vec3 origin    = cam_origin + offset;
   const Vec3 direction = cam_lower_left_corner + cam_horizontal * s +
-                         cam_vertical * t - cam_origin - offset;
+                         cam_vertical * t - cam_origin;
 
   return make_ray(origin, direction);
 /*
@@ -240,13 +248,13 @@ f32 reflectance(f32 cosine, f32 refraction_index) {
  * Specializations for different materials
  */
 
-bool scatter_lambertian(const Material material,
+bool scatter_lambertian(inout uint rand_seed,
+                        const Material material,
                         const Hit_Info hi,
                         out Vec3 attenuation_color,
                         out Ray out_ray) {
-  Vec3 scatter_direction = hi.normal + random_unit_vector();
-  //if (near_zero(scatter_direction)) {
-  if (len_sq(scatter_direction) < 0.001f) {
+  Vec3 scatter_direction = hi.normal + random_unit_vector(rand_seed);
+  if (near_zero(scatter_direction)) {
     scatter_direction = hi.normal;
   }
 
@@ -256,20 +264,22 @@ bool scatter_lambertian(const Material material,
   return true;
 }
 
-bool scatter_metal(const Material material,
+bool scatter_metal(inout uint rand_seed,
+                   const Material material,
                    const Ray in_ray,
                    const Hit_Info hi,
                    out Vec3 attenuation_color,
                    out Ray out_ray) {
   Vec3 reflected = reflect(normalize(in_ray.direction), hi.normal);
-  Vec3 direction = reflected + random_in_unit_sphere() * material.fuzz;
+  Vec3 direction = reflected + random_in_unit_sphere(rand_seed) * material.fuzz;
   out_ray = make_ray(hi.p, direction);
 
   attenuation_color = material.albedo;
   return (dot(out_ray.direction, hi.normal) > 0);
 }
 
-bool scatter_dielectric(const Material material,
+bool scatter_dielectric(inout uint rand_seed,
+                        const Material material,
                         const Ray in_ray,
                         const Hit_Info hi,
                         out Vec3 attenuation_color,
@@ -282,7 +292,7 @@ bool scatter_dielectric(const Material material,
   f32 sin_theta = sqrt(1.0f - cos_theta * cos_theta);
 
   bool can_refract = (refraction_ratio * sin_theta) <= 1.0f;
-  bool reflectance_test = reflectance(cos_theta, refraction_ratio) > random_f32();
+  bool reflectance_test = reflectance(cos_theta, refraction_ratio) > random_f32(rand_seed);
 
   Vec3 direction;
   if (can_refract && !reflectance_test) {
@@ -304,7 +314,8 @@ emit_diffuse_light(const Material material) {
 
 
 // Actual scatter and emit definitions
-bool scatter(const Material material,
+bool scatter(inout uint rand_seed,
+             const Material material,
              const Ray in_ray,
              const Hit_Info hi,
              out Vec3 attenuation_color,
@@ -315,15 +326,15 @@ bool scatter(const Material material,
 
   switch (material.type) {
     case MaterialType_Lambertian: {
-      return scatter_lambertian(material, hi, attenuation_color, out_ray);
+      return scatter_lambertian(rand_seed, material, hi, attenuation_color, out_ray);
     } break;
 
     case MaterialType_Metal: {
-      return scatter_metal(material, in_ray, hi, attenuation_color, out_ray);
+      return scatter_metal(rand_seed, material, in_ray, hi, attenuation_color, out_ray);
     } break;
 
     case MaterialType_Dielectric: {
-      return scatter_dielectric(material, in_ray, hi, attenuation_color, out_ray);
+      return scatter_dielectric(rand_seed, material, in_ray, hi, attenuation_color, out_ray);
     } break;
 
     default: {
@@ -346,7 +357,6 @@ emit(const Material material) {
 //
 bool
 hit_sphere(const Ray r, const Sphere s, f32 t_min, f32 t_max, out Hit_Info hi) {
-  hi = make_hit_info();
   Vec3 oc = r.origin - s.center;
 
   // Inline len_sq and dot
@@ -403,7 +413,7 @@ bool hit_scene(const Ray r, float tmin, float tmax, out Hit_Info hi) {
   return hit_;
 }
 
-Vec3 ray_color(Ray r, int depth) {
+Vec3 ray_color(inout uint rand_seed, Ray r, int depth) {
   //
   Ray r_in;
   r_in.origin = r.origin;
@@ -420,7 +430,7 @@ Vec3 ray_color(Ray r, int depth) {
     if (hit_scene(r_in, 0.001, INFINITY, hi)) {
       Ray r_out;
       Vec3 atten;
-      if (scatter(materials[hi.mat_id], r_in, hi, atten, r_out)) {
+      if (scatter(rand_seed, materials[hi.mat_id], r_in, hi, atten, r_out)) {
         r_in = r_out;
         bcolor *= atten;
         depth--;
@@ -472,15 +482,17 @@ Vec3 ray_color(const Ray r_in, int depth) {
 [numthreads(16, 16, 1)]
 void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)
 {
+  uint rand_seed = DTid.x * IMG_WIDTH + DTid.y;
+
   uint2 id = uint2(DTid.x, DTid.y); // 2D index for 2D texture
-  output[id] = float4(id.x/512.f, id.y/512.f, 1, 1);
+  output[id] = float4(id.y/512.f, 1, 1, 1);
   Vec3 pixel_color = Vec3(0,0,0);
   
   for (int i = 0; i < num_samples; i++) {
-    f32 u = (f32(id.x) + random_f32())/(IMG_WIDTH - 1);
-    f32 v = (f32(id.y) + random_f32())/(IMG_HEIGHT - 1);
-    Ray r       = get_ray_at(u, v);
-    pixel_color = pixel_color + ray_color(r, num_reflections);
+    f32 u = (f32(id.x) + random_f32(rand_seed))/(IMG_WIDTH - 1);
+    f32 v = (f32(id.y) + random_f32(rand_seed))/(IMG_HEIGHT - 1);
+    Ray r       = get_ray_at(rand_seed, u, v);
+    pixel_color = pixel_color + ray_color(rand_seed, r, num_reflections);
   }
 
   pixel_color = pixel_color * (1.f / num_samples);
