@@ -17,6 +17,11 @@ gfx_rt_init_or_panic(GFX_RT_Input const &in);
 void
 gfx_rt_start();
 
+// Returns true if GPU finished ray tracing the scene.
+//
+[[nodiscard]] bool
+gfx_rt_done();
+
 [[nodiscard]] void*
 gfx_rt_output_as_imgui_texture();
 } // namespace rt

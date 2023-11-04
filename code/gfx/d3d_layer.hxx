@@ -23,6 +23,7 @@ using IBuffer              = ::ID3D11Buffer;
 using IBlob                = ::ID3DBlob;
 using IUnorderedAccessView = ::ID3D11UnorderedAccessView;
 using IShaderResourceView  = ::ID3D11ShaderResourceView;
+using IQuery               = ::ID3D11Query;
 
 #define d3d_safe_release_(x)                                                         \
   do {                                                                               \

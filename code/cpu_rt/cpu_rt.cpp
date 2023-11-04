@@ -146,7 +146,7 @@ check_possible_contacts_for_collision(World const           &world,
 // @Hot
 [[nodiscard]] Vec3
 ray_color(World const &world, Ray const &r, std::vector<BVH_Flat> const& bvh, s32 depth) {
-  // We exceeded ray bounce limit -- no more light is gathered.
+  // We exceeded ray bounce limit -- no more light is gathered. Scrapping.
   //
   if (depth == 0) {
     return Vec3 {0, 0, 0};
@@ -185,9 +185,9 @@ ray_color(World const &world, Ray const &r, std::vector<BVH_Flat> const& bvh, s3
 
 s32 constexpr static NUM_CHANNELS = 4;
 // @todo: move to ui
-s32 const SAMPLES_PER_PIXEL = 10; // 500
+s32 const SAMPLES_PER_PIXEL = 50; // 500
 // @todo: move to ui
-s32 const MAX_DEPTH = 5; // 50
+s32 const MAX_DEPTH = 50; // 50
 
 f32 const COLOR_SCALE = 1.0f / SAMPLES_PER_PIXEL;
 
@@ -291,8 +291,7 @@ do_ray_tracing() {
 
   u8 *buffer = perm<u8>(image_width * image_height * NUM_CHANNELS);
 
-  //s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
-  s32 const num_of_threads_supported = 1;
+  s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
 
   std::atomic_bool *thread_flags = new std::atomic_bool[num_of_threads_supported];
 

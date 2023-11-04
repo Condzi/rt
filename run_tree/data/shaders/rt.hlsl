@@ -404,16 +404,26 @@ Vec3 ray_color(inout uint rand_seed, Ray r_in, int depth) {
 
   Ray current_ray = r_in;
   for (int i = 0; i < depth; i++) {
+    if (i == depth - 1) {
+      // Scrap this sample since we cannot determine its color.
+      // Should not happen that often anyway.
+      //
+      final_color = Vec3(0,0,0);
+      break;
+    }
+
     Hit_Info hi = make_hit_info();
     if (!hit_scene(current_ray, 0.001, INFINITY, hi)) {
-      return final_color*background_color;
+      final_color*= background_color;
+      break;
     }
 
     Vec3 attenuated_color;
     Ray scattered_ray;
-
     if (!scatter(rand_seed, materials[hi.mat_id], current_ray, hi, attenuated_color, scattered_ray)) {
-      return Vec3(0,0,0); // @ToDo: return emission color.
+      // @ToDo: handle emission. Probably by accumulating separately.
+      final_color = Vec3(0,0,0);
+      break;
     }
 
     current_ray = scattered_ray;

@@ -70,6 +70,10 @@ struct RT_Pipeline {
   RT_Sphere   *spheres   = NULL;
   RT_Quad     *quads     = NULL;
   RT_Material *materials = NULL;
+
+  // Used for signaling finished work.
+  //
+  ::IQuery *gpu_done_query = NULL;
 };
 
 //
@@ -112,6 +116,8 @@ gfx_rt_init_or_panic(GFX_RT_Input const &in) {
 
 void
 gfx_rt_start() {
+  D3D11_QUERY_DESC gpu_done_query_desc = {D3D11_QUERY_EVENT, 0};
+
   // Bind buffers
   //
   gD3d.device_context->CSSetConstantBuffers(0, 1, &(gD3d.rt_pipeline->gpu_consts));
@@ -127,10 +133,15 @@ gD3d.device_context->CSSetShaderResources(
   gD3d.device_context->CSSetUnorderedAccessViews(
       0, 1, &(gD3d.rt_pipeline->uav), NULL);
   gD3d.device_context->CSSetShader(gD3d.rt_pipeline->cs, NULL, 0);
+
+  ::HRESULT hr = gD3d.device->CreateQuery(&gpu_done_query_desc,
+                                          &(gD3d.rt_pipeline->gpu_done_query));
+  d3d_check_hresult_(hr);
   // 512 -- Image size, 16 -- sectors? I guess 16 is not relevant for our use case,
   // should be just image_size instead?
   //
   gD3d.device_context->Dispatch(32, 32, 1);
+  gD3d.device_context->End(gD3d.rt_pipeline->gpu_done_query);
 
   // Unbind buffers
   //
@@ -140,6 +151,12 @@ gD3d.device_context->CSSetShaderResources(
   gD3d.device_context->CSSetShaderResources(0, 1, &null_view);
   gD3d.device_context->CSSetShaderResources(1, 1, &null_view);
   gD3d.device_context->CSSetShaderResources(2, 1, &null_view);
+}
+
+[[nodiscard]] bool
+gfx_rt_done() {
+  return S_OK ==
+         gD3d.device_context->GetData(gD3d.rt_pipeline->gpu_done_query, NULL, 0, 0);
 }
 
 [[nodiscard]] void *
@@ -169,7 +186,7 @@ void
 gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
   RT_Constants &rcs = gD3d.rt_pipeline->constants;
 
-  rcs = {.num_samples     = 500,
+  rcs = {.num_samples     = 1000,
          .num_reflections = 50,
 
          .num_spheres   = in.w.num_spheres,
