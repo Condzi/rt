@@ -112,7 +112,7 @@ cbuffer ConstantBuffer : register(b0)
   s32 num_spheres;
   s32 num_quads;
   s32 num_materials;
-  f32  cam_lens_radius;
+  f32 cam_lens_radius;
 
   // Camera properties
   //
@@ -132,46 +132,46 @@ StructuredBuffer<Material> materials : register(t2);
 //
 
 // RNG functions
-uint Rand(inout uint randSeed)
+uint Rand(inout uint rand_seed)
 {
-    randSeed = 1664525 * randSeed + 1013904223;
-    return randSeed;
+    rand_seed = 1664525 * rand_seed + 1013904223;
+    return rand_seed;
 }
 
-float random_f32(inout uint randSeed)
+float random_f32(inout uint rand_seed)
 {
-    return Rand(randSeed) / 4294967296.0;
+    return Rand(rand_seed) / 4294967296.0;
 }
 
-float random_f32_in_range(inout uint randSeed, float min, float max)
+float random_f32_in_range(inout uint rand_seed, float min, float max)
 {
-    return min + (max - min) * random_f32(randSeed);
+    return min + (max - min) * random_f32(rand_seed);
 }
 
-Vec3 random_vec3(inout uint randSeed)
+Vec3 random_vec3(inout uint rand_seed)
 {
-    return float3(random_f32(randSeed), random_f32(randSeed), random_f32(randSeed));
+    return float3(random_f32(rand_seed), random_f32(rand_seed), random_f32(rand_seed));
 }
 
-Vec3 random_in_unit_sphere(inout uint randSeed)
+Vec3 random_in_unit_sphere(inout uint rand_seed)
 {
     Vec3 pt;
     do {
-        pt = 2.0 * random_vec3(randSeed) - 1.0;
+        pt = 2.0 * random_vec3(rand_seed) - 1.0;
     } while (dot(pt, pt) >= 1.0);
     return pt;
 }
 
-Vec3 random_unit_vector(inout uint randSeed)
+Vec3 random_unit_vector(inout uint rand_seed)
 {
-    return normalize(random_in_unit_sphere(randSeed));
+    return normalize(random_in_unit_sphere(rand_seed));
 }
 
-Vec3 random_in_unit_disk(inout uint randSeed)
+Vec3 random_in_unit_disk(inout uint rand_seed)
 {
     Vec3 p;
     do {
-        p = 2.0 * float3(random_f32(randSeed), random_f32(randSeed), 0) - float3(1, 1, 0);
+        p = 2.0 * float3(random_f32(rand_seed), random_f32(rand_seed), 0) - float3(1, 1, 0);
     } while (dot(p, p) >= 1.0);
     return p;
 }
@@ -184,7 +184,6 @@ Vec3 random_in_unit_disk(inout uint randSeed)
 bool f32_compare(f32 a, f32 b) {
   return abs(a - b) < FLT_EPSILON;
 }
-
 
 bool near_zero(Vec3 v) {
   return f32_compare(v.x, 0) && f32_compare(v.y, 0) && f32_compare(v.z, 0);
@@ -399,79 +398,36 @@ bool hit_scene(const Ray r, float tmin, float tmax, out Hit_Info hi) {
   return hit_;
 }
 
-Vec3 ray_color(inout uint rand_seed, Ray r, int depth) {
-  //
-  Ray r_in;
-  r_in.origin = r.origin;
-  r_in.direction = r.direction;
-  Vec3 bcolor = Vec3(1,1,1);
+Vec3 ray_color(inout uint rand_seed, Ray r_in, int depth) {
+  const Vec3 background_color = Vec3(0.5, 0.7, 1.0);
+  Vec3 final_color = Vec3(1,1,1);
 
-  while (true) {
-    if (depth <= 0) {
-      //
-      return Vec3(0,0,0);
-      // return bcolor;
-    }
-    Hit_Info hi = make_hit_info();
-    if (hit_scene(r_in, 0.001, INFINITY, hi)) {
-      Ray r_out;
-      Vec3 atten;
-      if (scatter(rand_seed, materials[hi.mat_id], r_in, hi, atten, r_out)) {
-        r_in = r_out;
-        bcolor *= atten;
-        depth--;
-      } else {
-        return Vec3(0,0,0);
-      }
-    } else {
-      Vec3 dir = normalize(r_in.direction);
-      float temp = 0.5 * (dir.y + 1.0);
-      bcolor *= Vec3(1.0 - temp, 1.0 - temp, 1.0 - temp) + temp * Vec3(0.5, 0.7, 1.0);
-      return bcolor;
-    }
-  }
-  return bcolor;
-}
-
-/*
-
-Vec3 ray_color(const Ray r_in, int depth) {
-  const Vec3 background_color = Vec3(0.5f, 0.7f, 1.0f);
-  Hit_Info hi = make_hit_info();
-  Vec3 final_color = Vec3(1, 1, 1);
   Ray current_ray = r_in;
-
-  for (int i = 0; i < depth; ++i) {
-    if (!hit_scene(r_in, 0.001f, INFINITY, hi)) {
-      final_color = final_color*background_color;
-      break;
+  for (int i = 0; i < depth; i++) {
+    Hit_Info hi = make_hit_info();
+    if (!hit_scene(current_ray, 0.001, INFINITY, hi)) {
+      return final_color*background_color;
     }
 
-    Ray scattered = r_in;
-    Vec3 attenuated_color = Vec3(0,0,0);
-    Vec3 emitted = emit(materials[hi.mat_id]);
-    if (!scatter(materials[hi.mat_id], current_ray, hi, attenuated_color, scattered)) {
-      final_color = final_color*emitted;
-    } else {
-      Vec3 color_from_scatter = attenuated_color*final_color;
-      final_color = color_from_scatter;
+    Vec3 attenuated_color;
+    Ray scattered_ray;
+
+    if (!scatter(rand_seed, materials[hi.mat_id], current_ray, hi, attenuated_color, scattered_ray)) {
+      return Vec3(0,0,0); // @ToDo: return emission color.
     }
 
-    current_ray = scattered;
-
+    current_ray = scattered_ray;
+    final_color *= attenuated_color;
   }
 
   return final_color;
 }
-*/
 
 [numthreads(16, 16, 1)]
-void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)
-{
+void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID) {
   uint rand_seed = DTid.x * IMG_WIDTH + DTid.y;
 
   uint2 id = uint2(DTid.x, DTid.y); // 2D index for 2D texture
-  output[id] = float4(id.y/512.f, 1, 1, 1);
   Vec3 pixel_color = Vec3(0,0,0);
   
   for (int i = 0; i < num_samples; i++) {
@@ -485,7 +441,7 @@ void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, ui
   pixel_color = Vec3(sqrt(pixel_color.r),
                      sqrt(pixel_color.g),
                      sqrt(pixel_color.b));
-  //pixel_color = saturate(pixel_color);
+  pixel_color = saturate(pixel_color);
 
   output[id] = Vec4(pixel_color, 1);
 }
