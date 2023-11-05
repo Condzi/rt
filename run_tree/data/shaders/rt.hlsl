@@ -128,14 +128,17 @@ StructuredBuffer<Sphere>   spheres   : register(t0);
 StructuredBuffer<Material> materials : register(t2);
 
 //
-//  RNG
+//  RNG, xorshift-based
 //
 
 // RNG functions
 uint Rand(inout uint rand_seed)
 {
-    rand_seed = 1664525 * rand_seed + 1013904223;
-    return rand_seed;
+    uint x = rand_seed;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    return rand_seed = x;
 }
 
 float random_f32(inout uint rand_seed)
@@ -157,8 +160,8 @@ Vec3 random_in_unit_sphere(inout uint rand_seed)
 {
     Vec3 pt;
     do {
-        pt = 2.0 * random_vec3(rand_seed) - 1.0;
-    } while (dot(pt, pt) >= 1.0);
+        pt = random_vec3(rand_seed);
+    } while (length(pt) >= 1.0);
     return pt;
 }
 
@@ -171,8 +174,8 @@ Vec3 random_in_unit_disk(inout uint rand_seed)
 {
     Vec3 p;
     do {
-        p = 2.0 * float3(random_f32(rand_seed), random_f32(rand_seed), 0) - float3(1, 1, 0);
-    } while (dot(p, p) >= 1.0);
+        p = float3(random_f32_in_range(rand_seed, -1, 1), random_f32_in_range(rand_seed, -1, 1), 0);
+    } while (length(p) >= 1.0);
     return p;
 }
 
@@ -404,38 +407,29 @@ Vec3 ray_color(inout uint rand_seed, Ray r_in, int depth) {
 
   Ray current_ray = r_in;
   for (int i = 0; i < depth; i++) {
-    if (i == depth - 1) {
-      // Scrap this sample since we cannot determine its color.
-      // Should not happen that often anyway.
-      //
-      final_color = Vec3(0,0,0);
-      break;
-    }
-
     Hit_Info hi = make_hit_info();
     if (!hit_scene(current_ray, 0.001, INFINITY, hi)) {
-      final_color*= background_color;
-      break;
+      return final_color * background_color;
     }
 
     Vec3 attenuated_color;
     Ray scattered_ray;
     if (!scatter(rand_seed, materials[hi.mat_id], current_ray, hi, attenuated_color, scattered_ray)) {
-      // @ToDo: handle emission. Probably by accumulating separately.
-      final_color = Vec3(0,0,0);
-      break;
+      return Vec3(0, 0 ,0);
     }
 
     current_ray = scattered_ray;
     final_color *= attenuated_color;
   }
 
-  return final_color;
+  return Vec3(0,0,0);
 }
 
 [numthreads(16, 16, 1)]
 void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID) {
-  uint rand_seed = DTid.x * IMG_WIDTH + DTid.y;
+  // Seed cannot be 0!
+  //
+  uint rand_seed = DTid.x * IMG_WIDTH + DTid.y + 2137;
 
   uint2 id = uint2(DTid.x, DTid.y); // 2D index for 2D texture
   Vec3 pixel_color = Vec3(0,0,0);
@@ -451,7 +445,7 @@ void CSMain (uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, ui
   pixel_color = Vec3(sqrt(pixel_color.r),
                      sqrt(pixel_color.g),
                      sqrt(pixel_color.b));
-  pixel_color = saturate(pixel_color);
+  pixel_color = clamp(pixel_color, 0.0f, 0.999f);
 
   output[id] = Vec4(pixel_color, 1);
 }

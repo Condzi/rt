@@ -31,7 +31,8 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
     - [X] hit_sphere
     - [X] materials functions
     - [X] actual detection loop
-    - [ ] debug why tainted shadows do not appear??? reflections weird in general.
+    - [X] debug why tainted shadows do not appear??? reflections weird in general.
+      -> issue with random_ functions incorrectly generating vectors
 
 # November
 - [ ] Extra
