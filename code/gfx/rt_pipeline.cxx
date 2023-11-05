@@ -37,6 +37,8 @@ struct RT_Sphere {
 };
 
 struct RT_Quad {
+  Vec3 Q;
+  Vec3 u, v;
   Vec3 normal;
   f32  D;
   Vec3 w;
@@ -123,10 +125,8 @@ gfx_rt_start() {
   gD3d.device_context->CSSetConstantBuffers(0, 1, &(gD3d.rt_pipeline->gpu_consts));
   gD3d.device_context->CSSetShaderResources(
       0, 1, &(gD3d.rt_pipeline->gpu_spheres_view));
-  /*
-gD3d.device_context->CSSetShaderResources(
-  1, 1, &(gD3d.rt_pipeline->gpu_quads_view));
-  */
+  gD3d.device_context->CSSetShaderResources(
+      1, 1, &(gD3d.rt_pipeline->gpu_quads_view));
   gD3d.device_context->CSSetShaderResources(
       2, 1, &(gD3d.rt_pipeline->gpu_materials_view));
 
@@ -221,7 +221,10 @@ gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
   if (rcs.num_quads) {
     gD3d.rt_pipeline->quads = perm<RT_Quad>(rcs.num_quads);
     for (s32 i = 0; i < rcs.num_quads; i++) {
-      gD3d.rt_pipeline->quads[i] = {.normal = in.w.quads[i].normal,
+      gD3d.rt_pipeline->quads[i] = {.Q      = in.w.quads[i].Q,
+                                    .u      = in.w.quads[i].u,
+                                    .v      = in.w.quads[i].v,
+                                    .normal = in.w.quads[i].normal,
                                     .D      = in.w.quads[i].D,
                                     .w      = in.w.quads[i].w,
                                     .mat_id = in.w.quads[i].mat_id};
