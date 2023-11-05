@@ -124,7 +124,7 @@ cbuffer ConstantBuffer : register(b0)
 }
 
 StructuredBuffer<Sphere>   spheres   : register(t0);
-// StructuredBuffer<Quad>     quads     : register(t1);
+StructuredBuffer<Quad>     quads     : register(t1);
 StructuredBuffer<Material> materials : register(t2);
 
 //
