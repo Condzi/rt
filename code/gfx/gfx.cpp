@@ -28,7 +28,8 @@ gfx_init_or_panic() {
       .Windowed = true, // @Note: for fullscreen, set to false & set width and height
       .SwapEffect = DXGI_SWAP_EFFECT_DISCARD};
 
-  ::UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
+  ::UINT flags =
+      D3D11_CREATE_DEVICE_SINGLETHREADED | D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT;
 
 #if HANDMADE_INTERNAL
   flags |= D3D11_CREATE_DEVICE_DEBUG;

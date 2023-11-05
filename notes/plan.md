@@ -33,6 +33,9 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
     - [X] actual detection loop
     - [X] debug why tainted shadows do not appear??? reflections weird in general.
       -> issue with random_ functions incorrectly generating vectors
+- [ ] Compute Shaders continues
+  - [ ] Quads
+  - [ ] Working lights example
 
 # November
 - [ ] Extra
@@ -42,4 +45,3 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
 
 Miscellaneous 
 - [ ] Editor
-- [ ] 3D immediate pipeline (to preview objects/scene in editor)

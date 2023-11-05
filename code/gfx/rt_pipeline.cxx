@@ -137,10 +137,9 @@ gD3d.device_context->CSSetShaderResources(
   ::HRESULT hr = gD3d.device->CreateQuery(&gpu_done_query_desc,
                                           &(gD3d.rt_pipeline->gpu_done_query));
   d3d_check_hresult_(hr);
-  // 512 -- Image size, 16 -- sectors? I guess 16 is not relevant for our use case,
-  // should be just image_size instead?
+  // 512 -- Image size, 16 -- number of threads?
   //
-  gD3d.device_context->Dispatch(32, 32, 1);
+  gD3d.device_context->Dispatch(512 / 16, 512 / 16, 1);
   gD3d.device_context->End(gD3d.rt_pipeline->gpu_done_query);
 
   // Unbind buffers
@@ -151,6 +150,9 @@ gD3d.device_context->CSSetShaderResources(
   gD3d.device_context->CSSetShaderResources(0, 1, &null_view);
   gD3d.device_context->CSSetShaderResources(1, 1, &null_view);
   gD3d.device_context->CSSetShaderResources(2, 1, &null_view);
+
+  ID3D11UnorderedAccessView *null_uav = NULL;
+  gD3d.device_context->CSSetUnorderedAccessViews(0, 1, &null_uav, NULL);
 }
 
 [[nodiscard]] bool
@@ -186,7 +188,7 @@ void
 gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
   RT_Constants &rcs = gD3d.rt_pipeline->constants;
 
-  rcs = {.num_samples     = 500,
+  rcs = {.num_samples     = 100,
          .num_reflections = 50,
 
          .num_spheres   = in.w.num_spheres,
