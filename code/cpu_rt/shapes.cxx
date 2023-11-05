@@ -5,10 +5,10 @@ make_sphere(Vec3 center, f32 r) {
   Vec3 const aabb_min = center - radius_vec;
   Vec3 const aabb_max = center + radius_vec;
 
-  return {.center   = center,
-          .radius   = r,
-          .aabb     = make_aabb_from_extremes(aabb_min, aabb_max),
-          .material = NULL};
+  return {.center = center,
+          .radius = r,
+          .aabb   = make_aabb_from_extremes(aabb_min, aabb_max),
+          .mat_id = 0};
 }
 
 [[nodiscard]] Quad
@@ -31,6 +31,6 @@ make_quad(Vec3 Q, Vec3 u, Vec3 v) {
           .D        = D,
           .w        = w,
           .aabb     = aabb,
-          .material = NULL};
+          .mat_id = 0};
 }
 } // namespace rt

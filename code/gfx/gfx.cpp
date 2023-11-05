@@ -8,6 +8,7 @@ struct D3d {
   ::IRenderTargetView *render_target_view = NULL;
 
   struct XXC_Pipeline *xxc_pipeline = NULL;
+  struct RT_Pipeline  *rt_pipeline = NULL;
 } static gD3d;
 
 void
@@ -36,18 +37,35 @@ gfx_init_or_panic() {
   ::D3D_FEATURE_LEVEL       feature_level;
   ::D3D_FEATURE_LEVEL const feature_levels[] = {D3D_FEATURE_LEVEL_11_1};
   ::HRESULT                 hr;
-  hr = ::D3D11CreateDeviceAndSwapChain(NULL,
-                                       D3D_DRIVER_TYPE_HARDWARE,
-                                       NULL,
-                                       flags,
-                                       feature_levels,
-                                       ARRAYSIZE(feature_levels),
-                                       D3D11_SDK_VERSION,
-                                       &swap_chain_descr,
-                                       &gD3d.swap_chain,
-                                       &gD3d.device,
-                                       &feature_level,
-                                       &gD3d.device_context);
+  ::IDXGIFactory6          *dxgiFactory;
+
+  hr = ::CreateDXGIFactory1(__uuidof(IDXGIFactory6), (void **)&dxgiFactory);
+  d3d_check_hresult_(hr);
+
+  ::IDXGIAdapter1 *desiredAdapter = NULL;
+  for (UINT i = 0;
+       dxgiFactory->EnumAdapterByGpuPreference(
+           i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&desiredAdapter)) !=
+       DXGI_ERROR_NOT_FOUND;
+       ++i) {
+    if (desiredAdapter) {
+      // Found a high-performance GPU, use it
+      break;
+    }
+  }
+  hr = ::D3D11CreateDeviceAndSwapChain(
+      desiredAdapter,          // Use the desired adapter here
+      D3D_DRIVER_TYPE_UNKNOWN, // Change this to UNKNOWN when using an adapter
+      NULL,
+      flags,
+      feature_levels,
+      ARRAYSIZE(feature_levels),
+      D3D11_SDK_VERSION,
+      &swap_chain_descr,
+      &gD3d.swap_chain,
+      &gD3d.device,
+      &feature_level,
+      &gD3d.device_context);
 
   check_(gD3d.swap_chain);
   check_(gD3d.device);
@@ -62,6 +80,7 @@ gfx_init_or_panic() {
   d3d_check_hresult_(hr);
 
   d3d_safe_release_(framebuffer);
+  d3d_safe_release_(dxgiFactory);
 
   gfx_im_init_or_panic();
 }
@@ -76,7 +95,7 @@ gfx_render() {
   // Tell the output merger to use our render target
   gD3d.device_context->OMSetRenderTargets(1, &gD3d.render_target_view, NULL);
 
-  gfx_im_flush();
+  //gfx_im_flush();
   dear_imgui_draw();
 
   // Present
@@ -85,3 +104,4 @@ gfx_render() {
 } // namespace rt
 
 #include "im_pipeline.cxx"
+#include "rt_pipeline.cxx"

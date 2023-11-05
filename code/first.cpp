@@ -89,15 +89,28 @@ main(void) {
 
   dbg_check_(false);
 
-  f32                                            rt_time = 0;
-  std::chrono::high_resolution_clock::time_point t0 =
-      std::chrono::high_resolution_clock::now();
+  f32 cpu_start_time = os_get_app_uptime();
+  f32 cpu_end_time   = 0;
 
   Rt_Output rt_out = do_ray_tracing();
+  f32 const gpu_start_time = os_get_app_uptime();
+  f32       gpu_end_time   = 0;
+  gfx_rt_start();
+  ImTextureID rt_tex = NULL;
 
   // write_png_or_panic("hello_ray_tracing.png", rt_out.rgba_data, rt_out.image_size);
 
   while (!window_is_closed()) {
+    if (!rt_tex && gfx_rt_done()) {
+      // @Note: we need to unbind the uav because we can't write and read at the same
+      // time
+      ID3D11UnorderedAccessView *nullUAV = NULL;
+      gD3d.device_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, NULL);
+
+      rt_tex       = gfx_rt_output_as_imgui_texture();
+      gpu_end_time = os_get_app_uptime();
+    }
+
     win32_message_loop();
 
     gfx_im_rect({.x = 650, .y = 400}, {.width = 50, .height = 100}, COLOR_RED);
@@ -114,6 +127,15 @@ main(void) {
                  ImVec2(rt_out.image_size.width, rt_out.image_size.height));
     ImGui::End();
 
+    ImGui::Begin("GPU Ray Tracing");
+    if (rt_tex) {
+      ImGui::Text("Finished in %g seconds.", gpu_end_time - gpu_start_time);
+      ImGui::Image(rt_tex, ImVec2(512, 512));
+    } else {
+      ImGui::Text("Elapsed: %g seconds.", os_get_app_uptime() - gpu_start_time);
+    }
+    ImGui::End();
+
     ImGui::Begin("Threads");
     ImGui::Text("%d threads used", rt_out.num_threads);
     s32 num_finished = 0;
@@ -128,16 +150,15 @@ main(void) {
       }
     }
 
-    auto t1 = std::chrono::high_resolution_clock::now();
-    auto time =
-        std::chrono::duration_cast<std::chrono::duration<f32>>(t1 - t0).count();
     if (num_finished == rt_out.num_threads) {
-      if (rt_time == 0) {
-        rt_time = time;
+      if (f32_compare(cpu_end_time, 0)) {
+        cpu_end_time = os_get_app_uptime();
       }
-      ImGui::Text("Finished in %g seconds.", rt_time);
-      ImGui::Text("%g Mrays/s", ((s64)total_ray_count / rt_time) / 1'000'000);
+      f32 const time = cpu_end_time - cpu_start_time;
+      ImGui::Text("Finished in %g seconds.", time);
+      ImGui::Text("%g Mrays/s", ((s64)total_ray_count / time) / 1'000'000);
     } else {
+      f32 const time = os_get_app_uptime() - cpu_start_time;
       ImGui::Text("Elapsed: %g seconds.", time);
       ImGui::Text("%g Mrays/s", ((s64)total_ray_count / time) / 1'000'000);
     }

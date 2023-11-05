@@ -56,6 +56,7 @@
 #include <d3d11.h>       // D3D interface
 #include <dxgi.h>        // DirectX driver interface
 #include <d3dcompiler.h> // shader compiler
+#include <dxgi1_6.h>
 
 #pragma comment(lib, "d3d11.lib")       // direct3D library
 #pragma comment(lib, "dxgi.lib")        // directx graphics interface

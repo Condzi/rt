@@ -38,7 +38,7 @@ do_ray_tracing();
 } // namespace rt
 
 #include "camera.hxx"
-#include "shapes.hxx"
 #include "materials.hxx"
+#include "shapes.hxx"
 #include "bvh.hxx"
 #include "world.hxx"

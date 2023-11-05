@@ -7,6 +7,8 @@ struct World {
   s32     num_quads_reserved;
   s32     num_quads;
   AABB    aabb;
+
+  std::vector<Material> materials;
 };
 
 enum World_Type { WorldType_Book1Final = 0, WorldType_Quads, WorldType_SimpleLights };
