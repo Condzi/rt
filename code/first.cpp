@@ -95,18 +95,12 @@ main(void) {
   Rt_Output rt_out = do_ray_tracing();
   f32 const gpu_start_time = os_get_app_uptime();
   f32       gpu_end_time   = 0;
+  ImTextureID rt_tex         = gfx_rt_output_as_imgui_texture();
   gfx_rt_start();
-  ImTextureID rt_tex = NULL;
 
   // write_png_or_panic("hello_ray_tracing.png", rt_out.rgba_data, rt_out.image_size);
-
   while (!window_is_closed()) {
-    if (!rt_tex && gfx_rt_done()) {
-      // @Note: we need to unbind the uav because we can't write and read at the same
-      // time
-      ID3D11UnorderedAccessView *nullUAV = NULL;
-      gD3d.device_context->CSSetUnorderedAccessViews(0, 1, &nullUAV, NULL);
-
+    if (gpu_end_time == 0 && gfx_rt_done()) {
       rt_tex       = gfx_rt_output_as_imgui_texture();
       gpu_end_time = os_get_app_uptime();
     }

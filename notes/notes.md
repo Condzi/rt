@@ -28,6 +28,11 @@ different modules (window module, input module and rendering module). If the sub
 don't handle the message, we fallback to the default window handler and that's it.
 This will prevent the window module from being too specific / tied to other modules.
 
+# GPU waits for CS to finish
+This is problematic if we strive for interactivity. GPU waits until the CS finishes.
+The only way to avoid that is to use command buffers from DX12 :(. Or use two GPUs,
+which may work for me.
+
 potential problems:
 - editor
 

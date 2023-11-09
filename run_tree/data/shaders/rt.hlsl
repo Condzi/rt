@@ -48,6 +48,8 @@ struct Sphere {
 };
 
 struct Quad {
+  Vec3 Q;
+  Vec3 u,v;
   Vec3 normal;
   f32 D;
   Vec3 w;
@@ -124,7 +126,7 @@ cbuffer ConstantBuffer : register(b0)
 }
 
 StructuredBuffer<Sphere>   spheres   : register(t0);
-// StructuredBuffer<Quad>     quads     : register(t1);
+StructuredBuffer<Quad>     quads     : register(t1);
 StructuredBuffer<Material> materials : register(t2);
 
 //
@@ -380,6 +382,43 @@ hit_sphere(const Ray r, const Sphere s, f32 t_min, f32 t_max, out Hit_Info hi) {
   return true;
 }
 
+bool
+hit_quad(const Ray r, const Quad q, f32 t_min, f32 t_max, out Hit_Info hi) {
+  const f32 denom = dot(q.normal, r.direction);
+
+  // Ray is parallel to the plane
+  if (abs(denom) < 1e-8) {
+    return false;
+  }
+
+  // Intersection point is outside the ray interval
+  const f32 t = (q.D - dot(q.normal, r.origin)) / denom;
+  if (t < t_min || t > t_max) {
+    return false;
+  }
+
+  const Vec3 intersection_point = at(r, t);
+  // Determine the hit point lies within the planar shape using its plane coordinates.
+
+  const Vec3 planar_hitpt_vector = intersection_point - q.Q;
+  const f32  alpha               = dot(q.w, cross(planar_hitpt_vector, q.v));
+  const f32  beta                = dot(q.w, cross(q.u, planar_hitpt_vector));
+
+  // Check if we're inside the (0, 1) range
+  if ((alpha < 0 || alpha > 1) || (beta < 0 || beta > 1)) {
+    return false;
+  }
+
+  // Ray hits the 2D shape; set the hit record and return true.
+  hi.t          = t;
+  hi.p          = intersection_point;
+  hi.mat_id     = q.mat_id;
+  hi.front_face = (dot(r.direction, q.normal) < 0);
+  hi.normal     = q.normal * (hi.front_face ? 1.f : -1.f);
+
+  return true;
+}
+
 //
 //  RT Logic
 //
@@ -398,6 +437,15 @@ bool hit_scene(const Ray r, float tmin, float tmax, out Hit_Info hi) {
       hi = temp;
     }
   }
+
+  for (int i = 0; i < num_quads; i++) {
+    if (hit_quad(r, quads[i], tmin, current_closest, temp)) {
+      hit_ = true;
+      current_closest = temp.t;
+      hi = temp;
+    }
+  }
+
   return hit_;
 }
 
@@ -413,13 +461,15 @@ Vec3 ray_color(inout uint rand_seed, Ray r_in, int depth) {
     }
 
     Vec3 attenuated_color;
+    Vec3 emitted_color = emit(materials[hi.mat_id]);
+
     Ray scattered_ray;
     if (!scatter(rand_seed, materials[hi.mat_id], current_ray, hi, attenuated_color, scattered_ray)) {
-      return Vec3(0, 0 ,0);
+      return final_color*emitted_color;
     }
 
     current_ray = scattered_ray;
-    final_color *= attenuated_color;
+    final_color = (final_color*attenuated_color) + emitted_color;
   }
 
   return Vec3(0,0,0);

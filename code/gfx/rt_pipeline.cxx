@@ -37,6 +37,8 @@ struct RT_Sphere {
 };
 
 struct RT_Quad {
+  Vec3 Q;
+  Vec3 u, v;
   Vec3 normal;
   f32  D;
   Vec3 w;
@@ -123,10 +125,8 @@ gfx_rt_start() {
   gD3d.device_context->CSSetConstantBuffers(0, 1, &(gD3d.rt_pipeline->gpu_consts));
   gD3d.device_context->CSSetShaderResources(
       0, 1, &(gD3d.rt_pipeline->gpu_spheres_view));
-  /*
-gD3d.device_context->CSSetShaderResources(
-  1, 1, &(gD3d.rt_pipeline->gpu_quads_view));
-  */
+  gD3d.device_context->CSSetShaderResources(
+      1, 1, &(gD3d.rt_pipeline->gpu_quads_view));
   gD3d.device_context->CSSetShaderResources(
       2, 1, &(gD3d.rt_pipeline->gpu_materials_view));
 
@@ -137,10 +137,9 @@ gD3d.device_context->CSSetShaderResources(
   ::HRESULT hr = gD3d.device->CreateQuery(&gpu_done_query_desc,
                                           &(gD3d.rt_pipeline->gpu_done_query));
   d3d_check_hresult_(hr);
-  // 512 -- Image size, 16 -- sectors? I guess 16 is not relevant for our use case,
-  // should be just image_size instead?
+  // 512 -- Image size, 16 -- number of threads?
   //
-  gD3d.device_context->Dispatch(32, 32, 1);
+  gD3d.device_context->Dispatch(512 / 16, 512 / 16, 1);
   gD3d.device_context->End(gD3d.rt_pipeline->gpu_done_query);
 
   // Unbind buffers
@@ -151,6 +150,9 @@ gD3d.device_context->CSSetShaderResources(
   gD3d.device_context->CSSetShaderResources(0, 1, &null_view);
   gD3d.device_context->CSSetShaderResources(1, 1, &null_view);
   gD3d.device_context->CSSetShaderResources(2, 1, &null_view);
+
+  ID3D11UnorderedAccessView *null_uav = NULL;
+  gD3d.device_context->CSSetUnorderedAccessViews(0, 1, &null_uav, NULL);
 }
 
 [[nodiscard]] bool
@@ -186,7 +188,7 @@ void
 gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
   RT_Constants &rcs = gD3d.rt_pipeline->constants;
 
-  rcs = {.num_samples     = 500,
+  rcs = {.num_samples     = 100,
          .num_reflections = 50,
 
          .num_spheres   = in.w.num_spheres,
@@ -202,20 +204,38 @@ gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
          .v                 = in.c.v,
          .w                 = in.c.w};
 
-  gD3d.rt_pipeline->spheres = perm<RT_Sphere>(rcs.num_spheres);
-  for (s32 i = 0; i < rcs.num_spheres; i++) {
-    gD3d.rt_pipeline->spheres[i] = {.center = in.w.spheres[i].center,
-                                    .radius = in.w.spheres[i].radius,
-                                    .mat_id = in.w.spheres[i].mat_id};
+  if (rcs.num_spheres) {
+    gD3d.rt_pipeline->spheres = perm<RT_Sphere>(rcs.num_spheres);
+    for (s32 i = 0; i < rcs.num_spheres; i++) {
+      gD3d.rt_pipeline->spheres[i] = {.center = in.w.spheres[i].center,
+                                      .radius = in.w.spheres[i].radius,
+                                      .mat_id = in.w.spheres[i].mat_id};
+    }
+  } else {
+    // Special case -- no spheres in the scene, use a dummy (which will not
+    // participate in rendering)
+    //
+    gD3d.rt_pipeline->spheres = perm<RT_Sphere>(1);
   }
 
-  gD3d.rt_pipeline->quads = perm<RT_Quad>(rcs.num_quads);
-  for (s32 i = 0; i < rcs.num_quads; i++) {
-    gD3d.rt_pipeline->quads[i] = {.normal = in.w.quads[i].normal,
-                                  .D      = in.w.quads[i].D,
-                                  .w      = in.w.quads[i].w,
-                                  .mat_id = in.w.quads[i].mat_id};
+  if (rcs.num_quads) {
+    gD3d.rt_pipeline->quads = perm<RT_Quad>(rcs.num_quads);
+    for (s32 i = 0; i < rcs.num_quads; i++) {
+      gD3d.rt_pipeline->quads[i] = {.Q      = in.w.quads[i].Q,
+                                    .u      = in.w.quads[i].u,
+                                    .v      = in.w.quads[i].v,
+                                    .normal = in.w.quads[i].normal,
+                                    .D      = in.w.quads[i].D,
+                                    .w      = in.w.quads[i].w,
+                                    .mat_id = in.w.quads[i].mat_id};
+    }
+  } else {
+    gD3d.rt_pipeline->quads = perm<RT_Quad>(1);
   }
+
+  // We need to have either quads and/or spheres in a scene in order to proceed.
+  //
+  check_(rcs.num_spheres || rcs.num_quads);
 
   gD3d.rt_pipeline->materials = perm<RT_Material>(rcs.num_materials);
   for (s32 i = 0; i < rcs.num_materials; i++) {
@@ -348,12 +368,19 @@ gfx_rt_create_rt_world_constants_or_panic() {
 
   // Spheres
   //
+  s32 num_spheres = gD3d.rt_pipeline->constants.num_spheres;
+  if (!num_spheres) {
+    // We always have one dummy sphere if none are present.
+    //
+    num_spheres = 1;
+  }
+
   ::D3D11_BUFFER_DESC const spheres_desc = {
-      .ByteWidth      = gD3d.rt_pipeline->constants.num_spheres * sizeof(RT_Sphere),
-      .Usage          = D3D11_USAGE_IMMUTABLE,
-      .BindFlags      = D3D11_BIND_SHADER_RESOURCE,
-      .CPUAccessFlags = 0,
-      .MiscFlags      = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
+      .ByteWidth           = num_spheres * sizeof(RT_Sphere),
+      .Usage               = D3D11_USAGE_IMMUTABLE,
+      .BindFlags           = D3D11_BIND_SHADER_RESOURCE,
+      .CPUAccessFlags      = 0,
+      .MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
       .StructureByteStride = sizeof(RT_Sphere)};
 
   hr = gD3d.device->CreateBuffer(
@@ -362,18 +389,23 @@ gfx_rt_create_rt_world_constants_or_panic() {
 
   // Quads
   //
-  /*
-  ::D3D11_BUFFER_DESC const quads_desc = {
-      .ByteWidth           = gD3d.rt_pipeline->constants.num_quads * sizeof(RT_Quad),
-      .Usage               = D3D11_USAGE_IMMUTABLE,
-      .BindFlags           = D3D11_BIND_SHADER_RESOURCE,
-      .CPUAccessFlags      = 0,
-      .MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
-      .StructureByteStride = sizeof(RT_Quad)};
+  s32 num_quads = gD3d.rt_pipeline->constants.num_quads;
+  if (!num_quads) {
+    // Similarly to spheres, we always have at least one dummy quad.
+    //
+    num_quads = 1;
+  }
+
+  ::D3D11_BUFFER_DESC const quads_desc = {.ByteWidth = num_quads * sizeof(RT_Quad),
+                                          .Usage     = D3D11_USAGE_IMMUTABLE,
+                                          .BindFlags = D3D11_BIND_SHADER_RESOURCE,
+                                          .CPUAccessFlags = 0,
+                                          .MiscFlags =
+                                              D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
+                                          .StructureByteStride = sizeof(RT_Quad)};
 
   hr = gD3d.device->CreateBuffer(&quads_desc, &qs_data, &gD3d.rt_pipeline->gpu_quads);
   d3d_check_hresult_(hr);
-  */
 
   // Materials
   //
@@ -392,17 +424,25 @@ gfx_rt_create_rt_world_constants_or_panic() {
 
 void
 gfx_rt_create_rt_world_srvs_or_panic() {
+  ::UINT num_spheres = (::UINT)gD3d.rt_pipeline->constants.num_spheres;
+  if (!num_spheres) {
+    num_spheres = 1;
+  }
+
+  ::UINT num_quads = (::UINT)gD3d.rt_pipeline->constants.num_quads;
+  if (!num_quads) {
+    num_quads = 1;
+  }
+
   ::D3D11_SHADER_RESOURCE_VIEW_DESC const sp_desc = {
       .Format        = DXGI_FORMAT_UNKNOWN,
       .ViewDimension = D3D11_SRV_DIMENSION_BUFFER,
-      .Buffer        = {.FirstElement = 0,
-                        .NumElements  = (::UINT)gD3d.rt_pipeline->constants.num_spheres}};
+      .Buffer        = {.FirstElement = 0, .NumElements = num_spheres}};
 
   ::D3D11_SHADER_RESOURCE_VIEW_DESC const qs_desc = {
       .Format        = DXGI_FORMAT_UNKNOWN,
       .ViewDimension = D3D11_SRV_DIMENSION_BUFFER,
-      .Buffer        = {.FirstElement = 0,
-                        .NumElements  = (::UINT)gD3d.rt_pipeline->constants.num_quads}};
+      .Buffer        = {.FirstElement = 0, .NumElements = num_quads}};
 
   ::D3D11_SHADER_RESOURCE_VIEW_DESC const ms_desc = {
       .Format        = DXGI_FORMAT_UNKNOWN,
@@ -416,11 +456,9 @@ gfx_rt_create_rt_world_srvs_or_panic() {
       gD3d.rt_pipeline->gpu_spheres, &sp_desc, &(gD3d.rt_pipeline->gpu_spheres_view));
   d3d_check_hresult_(hr);
 
-  /*
-    hr = gD3d.device->CreateShaderResourceView(
-        gD3d.rt_pipeline->gpu_quads, &qs_desc, &(gD3d.rt_pipeline->gpu_quads_view));
-    d3d_check_hresult_(hr);
-  */
+  hr = gD3d.device->CreateShaderResourceView(
+      gD3d.rt_pipeline->gpu_quads, &qs_desc, &(gD3d.rt_pipeline->gpu_quads_view));
+  d3d_check_hresult_(hr);
 
   hr = gD3d.device->CreateShaderResourceView(gD3d.rt_pipeline->gpu_materials,
                                              &ms_desc,
