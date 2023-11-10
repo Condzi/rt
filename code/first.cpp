@@ -107,9 +107,15 @@ main(void) {
   f32 const  vfov     = 20.0f;
   f32 const  aperture = 0.1f;
 
-  // Static so it doesn't go out of scope
-  Camera cam =
-      make_camera(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus);
+  Camera_Parameters params {.center         = lookfrom,
+                            .look_at        = lookat,
+                            .up             = vup,
+                            .vfov           = vfov,
+                            .aspect_ratio   = aspect_ratio,
+                            .aperture       = aperture,
+                            .focus_distance = dist_to_focus};
+
+  Camera cam = make_camera(params);
 
   // World
   World w = create_world(WorldType_Book1Final);

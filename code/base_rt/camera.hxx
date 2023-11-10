@@ -9,14 +9,18 @@ struct Camera {
   f32 lens_radius;
 };
 
+struct Camera_Parameters {
+  Vec3 center;
+  Vec3 look_at;
+  Vec3 up;
+  f32  vfov;
+  f32  aspect_ratio;
+  f32  aperture;
+  f32  focus_distance;
+};
+
 [[nodiscard]] Camera
-make_camera(Vec3 center,
-            Vec3 look_at,
-            Vec3 up,
-            f32  vfow,
-            f32  aspect_ratio,
-            f32  aperture,
-            f32  focus_distance);
+make_camera(Camera_Parameters const& params);
 
 [[nodiscard]] Ray
 get_ray_at(Camera const &cam, f32 u, f32 v);

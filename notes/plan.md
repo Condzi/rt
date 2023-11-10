@@ -43,9 +43,10 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
   - [X] use iterative version of ray_color
   - [X] move out the common code from cpu_rt to rt_base
   - [X] separate cpu_rt from gfx rt creation
-  - [ ] add possibility render the scene multiple times with different parameters
   - [ ] refactor the code so it is possible to set parameters in gui before rendering
-
+    - [ ] Camera parameters gui
+    - [ ] "Render" GUI button
+    
 - [ ] Extra
   - [ ] API for the engine so other applications can use this renderer
   - [ ] use iGPU for ImGui and stuff, and dedicated for RT so it wont hang
