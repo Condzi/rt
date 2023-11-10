@@ -191,7 +191,7 @@ rt_loop_balanced(s32                          image_width,
                  s32                          image_height,
                  u8                          *buffer,
                  std::vector<BVH_Flat> const &bvh,
-                 Camera                      &cam,
+                 Camera const                &cam,
                  std::atomic_bool            &thread_flag,
                  World const                 &world) {
 
@@ -223,77 +223,20 @@ rt_loop_balanced(s32                          image_width,
   thread_flag = true;
 }
 
-[[nodiscard]] Rt_Output
-do_ray_tracing() {
-  f32 const aspect_ratio = 1;
-  s32 const image_width  = 512;
-  s32 const image_height = (s32)(image_width / aspect_ratio);
-
-  // Camera setup
-  //
-  Vec3 const vup {0, 1, 0};
-  f32 const  dist_to_focus = 15.0f;
-
-  // SimpleLights
-  /*
-  Vec3 const lookfrom {26, 3, 6};
-  Vec3 const lookat {0, 2, 0};
-  Vec3 const vup {0, 1, 0};
-  f32 const  aperture      = 0.1f
-  */
-  // Quads
-  // Vec3 const lookfrom {0, 0, 9};
-  // Vec3 const lookat {0, 0, 0};
-  // f32 const  vfov          = 80.0f;
-  // f32 const  aperture      = 0.1f;
-
-  Vec3 const lookfrom {13, 2, 3};
-  Vec3 const lookat {0, 0, 0};
-  f32 const  vfov          = 20.0f;
-  f32 const  aperture      = 0.1f;
-
-  // Static so it doesn't go out of scope
-  static Camera cam =
-      make_camera(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus);
-
-  // World
-  // Static so it doesn't go out of scope
-  static World w = create_world(WorldType_Book1Final);
-  // Generate list of BVH_Input based on object IDs.
-  //
-  std::vector<BVH_Input> bvh_input;
-  bvh_input.reserve(w.num_spheres + w.num_quads);
-  for (s32 i = 0; i < w.num_spheres; i++) {
-    Object_ID id {.idx = (u32)i, .type = ObjectType_Sphere};
-    bvh_input.emplace_back(id, w.spheres[i].aabb);
-  }
-  for (s32 i = 0; i < w.num_quads; i++) {
-    Object_ID id {.idx = (u32)i, .type = ObjectType_Quad};
-    bvh_input.emplace_back(id, w.quads[i].aabb);
-  }
-
-  static std::vector<BVH_Flat> bvh =
-      make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
-
-  // @Todo: fix me
-  {
-    static GFX_RT_Input in {
-        .im_size = {(f32)image_width, (f32)image_height}, .w = w, .c = cam};
-    gfx_rt_init_or_panic(in);
-  }
-
-  // Render
+[[nodiscard]] CPU_RT_Output
+do_ray_tracing(CPU_RT_Input const &in) {
+  s32 const image_width  = (s32)in.im_size.width;
+  s32 const image_height = (s32)in.im_size.height;
 
   u8 *buffer = perm<u8>(image_width * image_height * NUM_CHANNELS);
 
   s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
-
   std::atomic_bool *thread_flags = new std::atomic_bool[num_of_threads_supported];
 
   for (s32 i = 0; i < num_of_threads_supported; i++) {
     std::thread([=] {
       rt_loop_balanced(
-          image_width, image_height, buffer, bvh, cam, thread_flags[i], w);
+          image_width, image_height, buffer, in.bvh, in.c, thread_flags[i], in.w);
     }).detach();
   }
 

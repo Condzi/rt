@@ -74,29 +74,78 @@ main(void) {
   gfx_init_or_panic();
   dear_imgui_init();
 
-  String_Builder sb;
-
-  appendf(sb, "Hello, %s!\n", "World");
-  String str = to_temp_string(sb);
-
-  logf("Message: %s", as_cstr(str));
-
-  check_(sb.data != NULL);
-  check_(sb.size == 0);
-  check_(sb.reserved == 128);
-
-  dbg_check_(false);
-
   f32 cpu_start_time = os_get_app_uptime();
   f32 cpu_end_time   = 0;
 
-  Rt_Output rt_out = do_ray_tracing();
-  f32 const gpu_start_time = os_get_app_uptime();
-  f32       gpu_end_time   = 0;
+  // Common RT Setup
+  //
+
+  f32 const aspect_ratio = 1;
+  s32 const image_width  = 512;
+  s32 const image_height = (s32)(image_width / aspect_ratio);
+
+  // Camera setup
+  //
+  Vec3 const vup {0, 1, 0};
+  f32 const  dist_to_focus = 15.0f;
+
+  // SimpleLights
+  /*
+  Vec3 const lookfrom {26, 3, 6};
+  Vec3 const lookat {0, 2, 0};
+  Vec3 const vup {0, 1, 0};
+  f32 const  aperture      = 0.1f
+  */
+  // Quads
+  // Vec3 const lookfrom {0, 0, 9};
+  // Vec3 const lookat {0, 0, 0};
+  // f32 const  vfov          = 80.0f;
+  // f32 const  aperture      = 0.1f;
+
+  Vec3 const lookfrom {13, 2, 3};
+  Vec3 const lookat {0, 0, 0};
+  f32 const  vfov     = 20.0f;
+  f32 const  aperture = 0.1f;
+
+  // Static so it doesn't go out of scope
+  Camera cam =
+      make_camera(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus);
+
+  // World
+  World w = create_world(WorldType_Book1Final);
+  // Generate list of BVH_Input based on object IDs.
+  //
+  std::vector<BVH_Input> bvh_input;
+  bvh_input.reserve(w.num_spheres + w.num_quads);
+  for (s32 i = 0; i < w.num_spheres; i++) {
+    Object_ID id {.idx = (u32)i, .type = ObjectType_Sphere};
+    bvh_input.emplace_back(id, w.spheres[i].aabb);
+  }
+  for (s32 i = 0; i < w.num_quads; i++) {
+    Object_ID id {.idx = (u32)i, .type = ObjectType_Quad};
+    bvh_input.emplace_back(id, w.quads[i].aabb);
+  }
+
+  std::vector<BVH_Flat> bvh =
+      make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
+
+  // Common RT Setup end
+
+  GFX_RT_Input gpu_in {
+      .im_size = {(f32)image_width, (f32)image_height}, .w = w, .c = cam};
+  gfx_rt_init_or_panic(gpu_in);
+
+  CPU_RT_Input cpu_in {
+      .im_size = {(f32)image_width, (f32)image_height}, .w = w, .c = cam, .bvh = bvh};
+  CPU_RT_Output rt_out = do_ray_tracing(cpu_in);
+
+  f32 const   gpu_start_time = os_get_app_uptime();
+  f32         gpu_end_time   = 0;
   ImTextureID rt_tex         = gfx_rt_output_as_imgui_texture();
   gfx_rt_start();
 
-  // write_png_or_panic("hello_ray_tracing.png", rt_out.rgba_data, rt_out.image_size);
+  // write_png_or_panic("hello_ray_tracing.png", rt_out.rgba_data,
+  // rt_out.image_size);
   while (!window_is_closed()) {
     if (gpu_end_time == 0 && gfx_rt_done()) {
       rt_tex       = gfx_rt_output_as_imgui_texture();
@@ -162,7 +211,7 @@ main(void) {
 
     auto res = (ID3D11ShaderResourceView *)rt_out_as_texture;
     d3d_safe_release_(res);
-  }
+    }
 
   logf("Goodbye :)\n");
   fflush(gLog_File);
