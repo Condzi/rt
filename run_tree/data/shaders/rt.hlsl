@@ -460,10 +460,10 @@ Vec3 ray_color(inout uint rand_seed, Ray r_in, int depth) {
       return final_color * background_color;
     }
 
-    Vec3 attenuated_color;
     Vec3 emitted_color = emit(materials[hi.mat_id]);
 
     Ray scattered_ray;
+    Vec3 attenuated_color;
     if (!scatter(rand_seed, materials[hi.mat_id], current_ray, hi, attenuated_color, scattered_ray)) {
       return final_color*emitted_color;
     }

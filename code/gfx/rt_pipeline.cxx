@@ -3,6 +3,10 @@ namespace rt {
 //  Compute shader related types.
 //
 
+
+// All vlaues are "packed" into Vec4s & aligned to 16 bytes on the GPU, so we need 
+// to put them here like that. C/C++ alignment rules are not the same as CS/GPU.
+//
 struct alignas(16) RT_Constants {
   // Quality
   //

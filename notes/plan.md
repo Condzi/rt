@@ -40,10 +40,9 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
   - [X] Working lights example
 
 - [ ] Cleanup / refactor, in preparation for Extras
-  - [ ] move out the common code from cpu_rt to rt_base
-  - [ ] use iterative version of ray_color
+  - [X] use iterative version of ray_color
   - [ ] refactor the code so it is possible to set parameters in gui before rendering
-  - [ ] use packoffset to pack the data in hlsl constant buffer
+  - [ ] move out the common code from cpu_rt to rt_base
   - [ ] add possibility render the scene multiple times with different parameters
 
 - [ ] Extra
