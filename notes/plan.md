@@ -41,8 +41,8 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
 
 - [ ] Cleanup / refactor, in preparation for Extras
   - [X] use iterative version of ray_color
+  - [X] move out the common code from cpu_rt to rt_base
   - [ ] refactor the code so it is possible to set parameters in gui before rendering
-  - [ ] move out the common code from cpu_rt to rt_base
   - [ ] add possibility render the scene multiple times with different parameters
 
 - [ ] Extra

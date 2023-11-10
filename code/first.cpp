@@ -10,8 +10,8 @@
 #include <array>
 #include <algorithm> // std::sort in bvh
 #include <atomic>
-#include <chrono>
 #include <thread>
+#include <iterator> // std::back_inserter
 #include <unordered_map>
 
 #include "first.hpp"
@@ -24,6 +24,7 @@
 #include "gfx/gfx.hpp"
 #include "imgui/imgui.hpp"
 #include "parsers/parsers.hpp"
+#include "base_rt/base_rt.hpp"
 #include "cpu_rt/cpu_rt.hpp"
 
 #include "base/base.cpp"
@@ -33,6 +34,7 @@
 #include "gfx/gfx.cpp"
 #include "imgui/imgui.cpp"
 #include "parsers/parsers.cpp"
+#include "base_rt/base_rt.cpp"
 #include "cpu_rt/cpu_rt.cpp"
 
 using namespace rt;
@@ -59,10 +61,6 @@ errf(char const *fmt, TArgs... args) {
 int
 main(void) {
   gLog_File = fopen(RT_LOG_FILE, "w");
-
-  Vec2 vec2 {1, 1};
-  vec2 = Vec2 {2, 2};
-  Vec4 vec {.xy = vec2};
 
   logf("Logger initialized!\n");
 

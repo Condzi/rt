@@ -1,12 +1,4 @@
 namespace rt {
-[[nodiscard]] Ray
-make_ray(Vec3 origin, Vec3 direction) {
-  total_ray_count++;
-  return {.origin        = origin,
-          .direction     = direction,
-          .direction_inv = Vec3 {1, 1, 1} / direction};
-}
-
 struct Hit_Info {
   Material_ID mat_id;
   Vec3        p;
@@ -14,11 +6,6 @@ struct Hit_Info {
   f32         t;
   bool        front_face;
 };
-
-[[nodiscard]] Vec3
-at(Ray const &r, f32 t) {
-  return r.origin + r.direction * t;
-}
 
 // 12.4s for 10-10 params
 [[nodiscard]] __forceinline bool
@@ -46,7 +33,7 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   if (root == -1) return false;
 
   hi.t = root;
-  hi.p = at(r, root);
+  hi.p = ray_at(r, root);
 
   f32  inv_radius     = 1 / s.radius;
   Vec3 outward_normal = (hi.p - s.center) * inv_radius;
@@ -76,7 +63,7 @@ hit_quad(Ray const &r, Quad const &q, f32 t_min, f32 t_max, Hit_Info &hi) {
     return false;
   }
 
-  Vec3 const intersection_point = at(r, t);
+  Vec3 const intersection_point = ray_at(r, t);
   // Determine the hit point lies within the planar shape using its plane coordinates.
 
   Vec3 const planar_hitpt_vector = intersection_point - q.Q;
@@ -320,8 +307,4 @@ do_ray_tracing() {
 }
 } // namespace rt
 
-#include "camera.cxx"
-#include "materials.cxx"
-#include "bvh.cxx"
-#include "shapes.cxx"
-#include "world.cxx"
+#include "cpu_materials.cxx"

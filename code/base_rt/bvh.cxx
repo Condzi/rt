@@ -305,7 +305,7 @@ hit_BVH(std::vector<BVH_Flat> const &bvh, Ray const &ray) {
   candidates.reserve(128);
   candidates.clear();
 
-  hit_BVH_internal(bvh, 0, ray.origin, ray.direction_inv);
+  hit_BVH_internal(bvh, 0, ray.origin, Vec3{1,1,1} / ray.direction);
 
   std::vector<Object_ID> result;
   result.reserve(candidates.size() * LEAF_WIDTH);
