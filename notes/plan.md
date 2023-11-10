@@ -21,7 +21,7 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
     - [X] uber material
     - [X] replace unordered_map with an array in bvh
     - [X] flatten BVH to an array and use indices instead of pointers
-- [ ] Compute Shaders
+- [X] Compute Shaders
   - [X] pipeline setup, first shader that outputs a simple texture
   - [X] use indices instead of pointer to the materials in code
   - [X] pack and send RT data to GPU
@@ -33,15 +33,33 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
     - [X] actual detection loop
     - [X] debug why tainted shadows do not appear??? reflections weird in general.
       -> issue with random_ functions incorrectly generating vectors
-- [X] Compute Shaders continues
+
+# November
+- [X] Compute Shaders continued
   - [X] Quads
   - [X] Working lights example
 
-# November
+- [ ] Cleanup / refactor, in preparation for Extras
+  - [ ] move out the common code from cpu_rt to rt_base
+  - [ ] use iterative version of ray_color
+  - [ ] refactor the code so it is possible to set parameters in gui before rendering
+  - [ ] use packoffset to pack the data in hlsl constant buffer
+  - [ ] add possibility render the scene multiple times with different parameters
+
 - [ ] Extra
+  - [ ] API for the engine so other applications can use this renderer
   - [ ] use iGPU for ImGui and stuff, and dedicated for RT so it wont hang
   - [ ] moving camera using on-screen controls
-  - [ ] 3D models from quads?
-
-Miscellaneous 
-- [ ] Editor
+  - [ ] 3D models
+    - [ ] Ray-Triangle intersection (see materials.md)
+    - [ ] Naive triangle rendering
+    - [ ] .obj parser or something
+- [ ] Denoising (see materials.md)?
+  - adaptive sampling? https://blog.yiningkarlli.com/2015/03/adaptive-sampling.html
+- [ ] Editor?
+- [ ] Rendering gifs? (Simple moving camera would be cool)
+- [ ] portfolio with custom scenes showcasing all features
+- [ ] regression tests (https://blog.yiningkarlli.com/2021/05/porting-takua-to-arm-pt1.html)
+  - [ ] compare multisampled images between each other (with some differences because of floating point errors)
+  - [ ] compare single-sample images (only for the same platform) 
+- [ ] priority based dielectircs

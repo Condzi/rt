@@ -246,16 +246,33 @@ do_ray_tracing() {
   s32 const image_height = (s32)(image_width / aspect_ratio);
 
   // Camera setup
-  //Vec3 const lookfrom {13, 2, 3};
-  //Vec3 const lookat {0, 0, 0};
+  //
+  Vec3 const vup {0, 1, 0};
+
+  // SimpleLights
+  /*
+  Vec3 const lookfrom {26, 3, 6};
   Vec3 const lookat {0, 2, 0};
   Vec3 const vup {0, 1, 0};
-  f32 const  vfov = 20.0f;
-  // Vec3 const lookfrom {0, 0, 9};
-  Vec3 const lookfrom {26, 3, 6};
-  //f32 const  vfov          = 80.0f;
+  f32 const  dist_to_focus = 15.0f;
+  f32 const  aperture      = 0.1f
+  */
+  // Quads
+  Vec3 const lookfrom {0, 0, 9};
+  Vec3 const lookat {0, 0, 0};
+  f32 const  vfov          = 80.0f;
   f32 const  dist_to_focus = 15.0f;
   f32 const  aperture      = 0.1f;
+
+  // Vec3 const lookfrom {13, 2, 3};
+  // Vec3 const lookat {0, 0, 0};
+  //  Vec3 const lookat {0, 2, 0};
+  //  Vec3 const vup {0, 1, 0};
+  // f32 const  vfov = 20.0f;
+  //  Vec3 const lookfrom {0, 0, 9};
+  // Vec3 const lookfrom {26, 3, 6};
+  // f32 const  dist_to_focus = 15.0f;
+  // f32 const  aperture      = 0.1f;
 
   // Static so it doesn't go out of scope
   static Camera cam =
@@ -263,7 +280,7 @@ do_ray_tracing() {
 
   // World
   // Static so it doesn't go out of scope
-  static World w = create_world(WorldType_SimpleLights);
+  static World w = create_world(WorldType_Quads);
   // Generate list of BVH_Input based on object IDs.
   //
   std::vector<BVH_Input> bvh_input;
