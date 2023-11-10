@@ -54,6 +54,7 @@ add_quad(World &w, Quad q, Material const &mat) {
 [[nodiscard]] World
 world_book1() {
   World w;
+  w.background_color = {0.5, 0.7, 1.0};
   w.num_quads = w.num_quads_reserved = 0;
   w.quads                            = 0;
   w.num_spheres          = 0;
@@ -114,6 +115,7 @@ world_book1() {
 [[nodiscard]] World
 world_quads() {
   World w              = {0};
+  w.background_color = {0.5, 0.7, 1.0};
   w.num_quads_reserved = 5;
   w.quads              = perm<Quad>(w.num_quads_reserved);
 
@@ -135,6 +137,7 @@ world_quads() {
 [[nodiscard]] World
 world_simple_lights() {
   World w                = {0};
+  w.background_color = Vec3{0.5, 0.7, 1.0} * 0.01f; // Default bg, dimmed
   w.num_spheres_reserved = 3;
   w.num_quads_reserved   = 1;
   w.quads                = perm<Quad>(w.num_quads_reserved);

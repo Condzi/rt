@@ -136,7 +136,6 @@ ray_color(World const                 &world,
           Ray const                   &starting_ray,
           std::vector<BVH_Flat> const &bvh,
           s32                          depth) {
-  Vec3 const background_color {0.5, 0.7, 1.0};
   Vec3       final_color = Vec3 {1, 1, 1};
 
   Ray current_ray = starting_ray;
@@ -150,7 +149,7 @@ ray_color(World const                 &world,
     Hit_Info hi;
     if (!check_possible_contacts_for_collision(
             world, contacts, current_ray, {.min = 0.001f, .max = FLT_MAX}, hi)) {
-      return final_color * background_color;
+      return final_color * world.background_color;
     }
 
     Material const &material = world.materials[hi.mat_id];

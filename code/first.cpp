@@ -60,6 +60,8 @@ errf(char const *fmt, TArgs... args) {
 
 int
 main(void) {
+  World_Type const world_type = WorldType_Book1Final;
+
   gLog_File = fopen(RT_LOG_FILE, "w");
 
   logf("Logger initialized!\n");
@@ -86,39 +88,37 @@ main(void) {
 
   // Camera setup
   //
-  Vec3 const vup {0, 1, 0};
-  f32 const  dist_to_focus = 15.0f;
 
-  // SimpleLights
-  /*
-  Vec3 const lookfrom {26, 3, 6};
-  Vec3 const lookat {0, 2, 0};
-  Vec3 const vup {0, 1, 0};
-  f32 const  aperture      = 0.1f
-  */
-  // Quads
-  // Vec3 const lookfrom {0, 0, 9};
-  // Vec3 const lookat {0, 0, 0};
-  // f32 const  vfov          = 80.0f;
-  // f32 const  aperture      = 0.1f;
+  Camera_Parameters const cam_Book1Final {.center         = {13, 2, 3},
+                                          .look_at        = {0, 0, 0},
+                                          .up             = {0, 1, 0},
+                                          .vfov           = 20.0f,
+                                          .aspect_ratio   = aspect_ratio,
+                                          .aperture       = 0.1f,
+                                          .focus_distance = 15.0f};
+  Camera_Parameters const cam_Quads {.center         = {0, 0, 9},
+                                     .look_at        = {0, 0, 0},
+                                     .up             = {0, 1, 0},
+                                     .vfov           = 80.0f,
+                                     .aspect_ratio   = aspect_ratio,
+                                     .aperture       = 0.1f,
+                                     .focus_distance = 15.0f};
 
-  Vec3 const lookfrom {13, 2, 3};
-  Vec3 const lookat {0, 0, 0};
-  f32 const  vfov     = 20.0f;
-  f32 const  aperture = 0.1f;
+  Camera_Parameters const cam_SimpleLights {.center         = {26, 3, 6},
+                                            .look_at        = {0, 2, 0},
+                                            .up             = {0, 1, 0},
+                                            .vfov           = 20.0f,
+                                            .aspect_ratio   = aspect_ratio,
+                                            .aperture       = 0.1f,
+                                            .focus_distance = 15.0f};
 
-  Camera_Parameters params {.center         = lookfrom,
-                            .look_at        = lookat,
-                            .up             = vup,
-                            .vfov           = vfov,
-                            .aspect_ratio   = aspect_ratio,
-                            .aperture       = aperture,
-                            .focus_distance = dist_to_focus};
+  Camera_Parameters const camera_presets[WorldType__count] = {
+      cam_Book1Final, cam_Quads, cam_SimpleLights};
 
-  Camera cam = make_camera(params);
+  Camera cam = make_camera(camera_presets[world_type]);
 
   // World
-  World w = create_world(WorldType_Book1Final);
+  World w = create_world(world_type);
   // Generate list of BVH_Input based on object IDs.
   //
   std::vector<BVH_Input> bvh_input;
@@ -146,14 +146,14 @@ main(void) {
   CPU_RT_Output rt_out = do_ray_tracing(cpu_in);
 
   f32 const   gpu_start_time = os_get_app_uptime();
-  f32         gpu_end_time   = 0;
+  f32         gpu_end_time   = gpu_start_time;
   ImTextureID rt_tex         = gfx_rt_output_as_imgui_texture();
   gfx_rt_start();
 
   // write_png_or_panic("hello_ray_tracing.png", rt_out.rgba_data,
   // rt_out.image_size);
   while (!window_is_closed()) {
-    if (gpu_end_time == 0 && gfx_rt_done()) {
+    if (f32_compare(gpu_start_time, gpu_end_time) && gfx_rt_done()) {
       rt_tex       = gfx_rt_output_as_imgui_texture();
       gpu_end_time = os_get_app_uptime();
     }

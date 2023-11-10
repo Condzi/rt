@@ -24,6 +24,7 @@ struct alignas(16) RT_Constants {
     f32 lens_radius;
   };
 
+  alignas(16) Vec3 background_color;
   // Camera properties
   //
   alignas(16) Vec3 origin;
@@ -199,6 +200,8 @@ gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
          .num_quads     = in.w.num_quads,
          .num_materials = (s32)in.w.materials.size(),
          .lens_radius   = in.c.lens_radius,
+
+         .background_color = in.w.background_color,
 
          .origin            = in.c.origin,
          .horizontal        = in.c.horizontal,
