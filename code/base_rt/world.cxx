@@ -25,6 +25,24 @@ create_world(World_Type type) {
   return {};
 }
 
+[[nodiscard]] std::vector<BVH_Flat>
+world_create_bvh(World const &w) {
+  // Generate list of BVH_Input based on object IDs.
+  //
+  std::vector<BVH_Input> bvh_input;
+  bvh_input.reserve(w.num_spheres + w.num_quads);
+  for (s32 i = 0; i < w.num_spheres; i++) {
+    Object_ID id {.idx = (u32)i, .type = ObjectType_Sphere};
+    bvh_input.emplace_back(id, w.spheres[i].aabb);
+  }
+  for (s32 i = 0; i < w.num_quads; i++) {
+    Object_ID id {.idx = (u32)i, .type = ObjectType_Quad};
+    bvh_input.emplace_back(id, w.quads[i].aabb);
+  }
+
+  return make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
+}
+
 void
 add_sphere(World &w, Sphere s, Material const &mat) {
   assert(w.num_spheres < w.num_spheres_reserved);
@@ -54,6 +72,7 @@ add_quad(World &w, Quad q, Material const &mat) {
 [[nodiscard]] World
 world_book1() {
   World w;
+  w.background_color = {0.5, 0.7, 1.0};
   w.num_quads = w.num_quads_reserved = 0;
   w.quads                            = 0;
   w.num_spheres          = 0;
@@ -114,6 +133,7 @@ world_book1() {
 [[nodiscard]] World
 world_quads() {
   World w              = {0};
+  w.background_color = {0.5, 0.7, 1.0};
   w.num_quads_reserved = 5;
   w.quads              = perm<Quad>(w.num_quads_reserved);
 
@@ -135,6 +155,7 @@ world_quads() {
 [[nodiscard]] World
 world_simple_lights() {
   World w                = {0};
+  w.background_color = Vec3{0.5, 0.7, 1.0} * 0.01f; // Default bg, dimmed
   w.num_spheres_reserved = 3;
   w.num_quads_reserved   = 1;
   w.quads                = perm<Quad>(w.num_quads_reserved);

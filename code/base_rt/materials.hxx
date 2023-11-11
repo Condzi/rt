@@ -1,6 +1,4 @@
 namespace rt {
-struct Hit_Info;
-
 enum Material_Type : uint16_t {
   MaterialType_None = 0,
   MaterialType_Lambertian,
@@ -32,16 +30,6 @@ struct Material {
     } diffuse_light;
   };
 };
-
-[[nodiscard]] bool
-scatter(Material const &material,
-        Ray const      &in,
-        Hit_Info const &hi,
-        Vec3           &attenuation_color,
-        Ray            &out);
-
-[[nodiscard]] Vec3
-emit(Material const &material);
 
 [[nodiscard]] Material
 make_lambertian(Vec3 const &albedo);

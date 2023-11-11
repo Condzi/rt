@@ -14,8 +14,20 @@
 
 https://meistdan.github.io/publications/bvh_star/paper.pdf
 
+# Ray-Triangle intersection
+https://www.pbr-book.org/4ed/Shapes/Triangle_Meshes#RayndashTriangleIntersection
+
 Intel RT library:
 https://github.com/embree/embree/tree/master
 
 Ray vs AABB algorithms
 https://tavianator.com/2022/ray_box_boundary.html
+
+Denoising:
+https://alain.xyz/blog/ray-tracing-denoising
+
+Gold mine (Disney renderer programmer) 
+https://blog.yiningkarlli.com/2019/05/nested-dielectrics.html
+
+(unrelated?) Series about memory reordering
+https://preshing.com/20120515/memory-reordering-caught-in-the-act/

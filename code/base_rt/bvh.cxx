@@ -127,10 +127,6 @@ make_BVH_internal(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb)
   // s32 const axis = find_longest_axis(parent_aabb);
   s32 const axis = find_best_axis_using_SAH(input, begin, end, parent_aabb);
 
-  auto comparator = [axis](BVH_Input const &a, BVH_Input const &b) {
-    return a.aabb.v[axis].min < b.aabb.v[axis].min;
-  };
-
   BVH_Node *root = perm<BVH_Node>();
   root->aabb     = parent_aabb;
 
@@ -238,6 +234,10 @@ make_BVH_internal(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb)
 
   // Fallback to median split if bin split is not correct
   if (best_bin == BIN_NOT_FOUND) {
+    auto comparator = [axis](BVH_Input const &a, BVH_Input const &b) {
+      return a.aabb.v[axis].min < b.aabb.v[axis].min;
+    };
+
     best_bin_not_found++;
     std::sort(input + begin, input + end, comparator);
 
@@ -274,7 +274,7 @@ make_BVH(BVH_Input *input, s32 begin, s32 end, AABB const &parent_aabb) {
   std::vector<BVH_Flat> flat;
   uint16_t              idx = 0;
   flatten_recursive(root, flat, idx);
-  logf("idx=%d\n", (int)idx);
+  // logf("idx=%d\n", (int)idx);
 
   return flat;
 }
@@ -305,7 +305,7 @@ hit_BVH(std::vector<BVH_Flat> const &bvh, Ray const &ray) {
   candidates.reserve(128);
   candidates.clear();
 
-  hit_BVH_internal(bvh, 0, ray.origin, ray.direction_inv);
+  hit_BVH_internal(bvh, 0, ray.origin, Vec3{1,1,1} / ray.direction);
 
   std::vector<Object_ID> result;
   result.reserve(candidates.size() * LEAF_WIDTH);

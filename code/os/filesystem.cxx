@@ -147,7 +147,7 @@ os_init_filesystem() {
   // @Unicode
   char run_tree_dir[] = "W:\\pwr\\engineering-thesis\\rt\\run_tree";
   if (0 == ::SetCurrentDirectoryA(run_tree_dir)) {
-    errf("Failed to set the CWD to '%s'", run_tree_dir);
+    logf("!!! Failed to set the CWD to '%s'", run_tree_dir);
   }
 #endif
 

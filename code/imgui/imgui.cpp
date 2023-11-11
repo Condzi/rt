@@ -55,7 +55,7 @@ flip_image(u8 *pixels, int width, int height) {
 }
 
 [[nodiscard]] ImTextureID
-dear_imgui_create_texture_from_rt_output(Rt_Output const &rt_out) {
+dear_imgui_create_texture_from_rt_output(CPU_RT_Output const &rt_out) {
   auto const  width  = (::UINT)rt_out.image_size.width;
   auto const  height = (::UINT)rt_out.image_size.height;
   void const *pixels = rt_out.rgba_data.bytes;

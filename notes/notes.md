@@ -33,27 +33,16 @@ This is problematic if we strive for interactivity. GPU waits until the CS finis
 The only way to avoid that is to use command buffers from DX12 :(. Or use two GPUs,
 which may work for me.
 
-potential problems:
-- editor
+# Ray tracing base
+Move common stuff between gfx_rt and cpu_rt to rt_base (Wolrd, Shapes, Materials, Camera...). Make some common interface, like:
+`RT_Output ray_tracing(RT_Input const&)`
+where cpu_rt and gpu_rt have to implement it. It should also have some
+`void* aux` for stuff like thread flags in cpu_rt and texture id in gpu_rt.
+
 
 # To do / priority
-
-- 3D models from quads
-- moving camera from editor (maybe render in small resolution for fast refresh)
-- refactor
-
-Figure out a way to cast multiple rays at the same time, so we can test ray vs aabb in parallel.
-
-- Wrapping up
-  - performance benchmark (low hanging fruits at least)
-  - code refactoring
-
-- Moving to compute shaders
-
 - UTF-8, use String everywhere & rewrite the tprint to accept it.
-
 - hw info (simd availability, threads) from Agner Fog
-
 - unit test for math module
 - translate build scripts to shell?
 - 3D debug shapes?! -- need 3D math

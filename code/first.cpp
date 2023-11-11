@@ -10,8 +10,8 @@
 #include <array>
 #include <algorithm> // std::sort in bvh
 #include <atomic>
-#include <chrono>
 #include <thread>
+#include <iterator> // std::back_inserter
 #include <unordered_map>
 
 #include "first.hpp"
@@ -24,6 +24,7 @@
 #include "gfx/gfx.hpp"
 #include "imgui/imgui.hpp"
 #include "parsers/parsers.hpp"
+#include "base_rt/base_rt.hpp"
 #include "cpu_rt/cpu_rt.hpp"
 
 #include "base/base.cpp"
@@ -33,6 +34,7 @@
 #include "gfx/gfx.cpp"
 #include "imgui/imgui.cpp"
 #include "parsers/parsers.cpp"
+#include "base_rt/base_rt.cpp"
 #include "cpu_rt/cpu_rt.cpp"
 
 using namespace rt;
@@ -60,10 +62,6 @@ int
 main(void) {
   gLog_File = fopen(RT_LOG_FILE, "w");
 
-  Vec2 vec2 {1, 1};
-  vec2 = Vec2 {2, 2};
-  Vec4 vec {.xy = vec2};
-
   logf("Logger initialized!\n");
 
   if (!init_memory()) {
@@ -76,85 +74,208 @@ main(void) {
   gfx_init_or_panic();
   dear_imgui_init();
 
-  String_Builder sb;
+  // Common RT Setup
+  //
 
-  appendf(sb, "Hello, %s!\n", "World");
-  String str = to_temp_string(sb);
+  f32 const aspect_ratio = 1;
+  s32 const image_width  = 512;
+  s32 const image_height = (s32)(image_width / aspect_ratio);
 
-  logf("Message: %s", as_cstr(str));
+  // World
+  //
+  World_Type            world_type = WorldType_SimpleLights;
+  World                 w          = create_world(world_type);
+  std::vector<BVH_Flat> bvh        = world_create_bvh(w);
 
-  check_(sb.data != NULL);
-  check_(sb.size == 0);
-  check_(sb.reserved == 128);
+  // Camera setup
+  //
 
-  dbg_check_(false);
+  Camera_Parameters const cam_Book1Final {.center         = {13, 2, 3},
+                                          .look_at        = {0, 0, 0},
+                                          .up             = {0, 1, 0},
+                                          .vfov           = 20.0f,
+                                          .aspect_ratio   = aspect_ratio,
+                                          .aperture       = 0.1f,
+                                          .focus_distance = 15.0f};
+  Camera_Parameters const cam_Quads {.center         = {0, 0, 9},
+                                     .look_at        = {0, 0, 0},
+                                     .up             = {0, 1, 0},
+                                     .vfov           = 80.0f,
+                                     .aspect_ratio   = aspect_ratio,
+                                     .aperture       = 0.1f,
+                                     .focus_distance = 15.0f};
+
+  Camera_Parameters const cam_SimpleLights {.center         = {40, 0, -20},
+                                            .look_at        = {0, 4, 0},
+                                            .up             = {0, 1, 0},
+                                            .vfov           = 20.0f,
+                                            .aspect_ratio   = aspect_ratio,
+                                            .aperture       = 0.1f,
+                                            .focus_distance = 15.0f};
+
+  Camera_Parameters camera_presets[WorldType__count + 1] = {
+      cam_Book1Final, cam_Quads, cam_SimpleLights, {}};
+
+  // Set custom camera parameters (used in gui) to parameters of the
+  // selected world.
+  //
+  Camera_Parameters &cam_custom = camera_presets[WorldType__count];
+  cam_custom                    = camera_presets[world_type];
+
+  Camera cam = make_camera(cam_custom);
+
+  // Common RT Setup end
+
+  GFX_RT_Input gpu_in {
+      .im_size = {(f32)image_width, (f32)image_height}, .w = w, .c = cam};
+  gfx_rt_init_or_panic(gpu_in);
+
+  CPU_RT_Input cpu_in {
+      .im_size = {(f32)image_width, (f32)image_height}, .w = w, .c = cam, .bvh = bvh};
 
   f32 cpu_start_time = os_get_app_uptime();
-  f32 cpu_end_time   = 0;
+  f32 cpu_end_time   = cpu_start_time;
 
-  Rt_Output rt_out = do_ray_tracing();
-  f32 const gpu_start_time = os_get_app_uptime();
-  f32       gpu_end_time   = 0;
-  ImTextureID rt_tex         = gfx_rt_output_as_imgui_texture();
+  CPU_RT_Output rt_out = do_ray_tracing(cpu_in);
+
+  f32         gpu_start_time  = os_get_app_uptime();
+  f32         gpu_end_time   = gpu_start_time;
+  ImTextureID gpu_tex        = gfx_rt_output_as_imgui_texture();
+  ImTextureID cpu_tex        = NULL;
   gfx_rt_start();
 
-  // write_png_or_panic("hello_ray_tracing.png", rt_out.rgba_data, rt_out.image_size);
+  // write_png_or_panic("hello_ray_tracing.png", rt_out.rgba_data,
+  // rt_out.image_size);
   while (!window_is_closed()) {
-    if (gpu_end_time == 0 && gfx_rt_done()) {
-      rt_tex       = gfx_rt_output_as_imgui_texture();
+    if (f32_compare(gpu_start_time, gpu_end_time) && gfx_rt_done()) {
+      gpu_tex      = gfx_rt_output_as_imgui_texture();
       gpu_end_time = os_get_app_uptime();
     }
 
     win32_message_loop();
 
-    gfx_im_rect({.x = 650, .y = 400}, {.width = 50, .height = 100}, COLOR_RED);
-    gfx_im_rect({.x = 600, .y = 300}, {.width = 50, .height = 100}, COLOR_GREEN);
-    gfx_im_rect({.x = 700, .y = 300}, {.width = 50, .height = 100}, COLOR_BLUE);
-
     dear_imgui_update();
 
-    ImGui::Begin("CPU Ray Tracing");
-    // @Note: we do it over and over again because RT is ray tracing all the time
-    //       In future just add an atomic that counts number of threads finished.
-    ImTextureID rt_out_as_texture = dear_imgui_create_texture_from_rt_output(rt_out);
-    ImGui::Image(rt_out_as_texture,
-                 ImVec2(rt_out.image_size.width, rt_out.image_size.height));
-    ImGui::End();
-
-    ImGui::Begin("GPU Ray Tracing");
-    if (rt_tex) {
-      ImGui::Text("Finished in %g seconds.", gpu_end_time - gpu_start_time);
-      ImGui::Image(rt_tex, ImVec2(512, 512));
-    } else {
-      ImGui::Text("Elapsed: %g seconds.", os_get_app_uptime() - gpu_start_time);
+    if (ImGui::Begin("CPU Ray Tracing")) {
+      // @Note: we do it over and over again because RT is ray tracing all the time
+      cpu_tex = dear_imgui_create_texture_from_rt_output(rt_out);
+      ImGui::Image(cpu_tex,
+                   ImVec2(rt_out.image_size.width, rt_out.image_size.height));
     }
     ImGui::End();
 
-    ImGui::Begin("Threads");
-    ImGui::Text("%d threads used", rt_out.num_threads);
-    s32 num_finished = 0;
-    for (s32 i = 0; i < rt_out.num_threads; i++) {
-      ImGui::Text("Thread %d: ", i + 1);
-      ImGui::SameLine();
-      if (rt_out.thread_flags[i]) {
-        ImGui::Text("Finished");
-        num_finished++;
+    if (ImGui::Begin("GPU Ray Tracing")) {
+      if (gpu_tex) {
+        ImGui::Text("Finished in %g seconds.", gpu_end_time - gpu_start_time);
+        ImGui::Image(gpu_tex, ImVec2(512, 512));
       } else {
-        ImGui::Text("Running");
+        ImGui::Text("Elapsed: %g seconds.", os_get_app_uptime() - gpu_start_time);
       }
     }
+    ImGui::End();
 
-    if (num_finished == rt_out.num_threads) {
-      if (f32_compare(cpu_end_time, 0)) {
-        cpu_end_time = os_get_app_uptime();
+    if (ImGui::Begin("Threads")) {
+      ImGui::Text("%d threads used", rt_out.num_threads);
+      s32 num_finished = 0;
+      for (s32 i = 0; i < rt_out.num_threads; i++) {
+        ImGui::Text("Thread %d: ", i + 1);
+        ImGui::SameLine();
+        if (rt_out.thread_flags[i]) {
+          ImGui::Text("Finished");
+          num_finished++;
+        } else {
+          ImGui::Text("Running");
+        }
       }
-      f32 const time = cpu_end_time - cpu_start_time;
-      ImGui::Text("Finished in %g seconds.", time);
-      ImGui::Text("%g Mrays/s", ((s64)total_ray_count / time) / 1'000'000);
-    } else {
-      f32 const time = os_get_app_uptime() - cpu_start_time;
-      ImGui::Text("Elapsed: %g seconds.", time);
-      ImGui::Text("%g Mrays/s", ((s64)total_ray_count / time) / 1'000'000);
+
+      if (num_finished == rt_out.num_threads) {
+        if (f32_compare(cpu_end_time, cpu_start_time)) {
+          cpu_end_time = os_get_app_uptime();
+        }
+        f32 const time = cpu_end_time - cpu_start_time;
+        ImGui::Text("Finished in %g seconds.", time);
+        ImGui::Text("%g Mrays/s", ((s64)total_ray_count / time) / 1'000'000);
+      } else {
+        f32 const time = os_get_app_uptime() - cpu_start_time;
+        ImGui::Text("Elapsed: %g seconds.", time);
+        ImGui::Text("%g Mrays/s", ((s64)total_ray_count / time) / 1'000'000);
+      }
+    }
+    ImGui::End();
+
+    if (ImGui::Begin("Controls")) {
+      ImGui::SeparatorText("Preset Selector");
+      char const *items[WorldType__count] = {"Book 1", "Quads", "Simple Lights"};
+      static int  item_current            = 1;
+      if (ImGui::ListBox("#select_world", &item_current, items, WorldType__count)) {
+        w          = create_world((World_Type)item_current);
+        bvh        = world_create_bvh(w);
+        cam_custom = camera_presets[item_current];
+      }
+
+      ImGui::SeparatorText("Camera Controls");
+      static bool render_on_gpu_on_data_update = true;
+      bool        any_update                   = false;
+
+      any_update |= ImGui::SliderFloat3("Center",
+                                        cam_custom.center.v,
+                                        -50,
+                                        50,
+                                        "%g",
+                                        ImGuiSliderFlags_NoRoundToFormat);
+      any_update |= ImGui::SliderFloat3("Look At",
+                                        cam_custom.look_at.v,
+                                        -50,
+                                        50,
+                                        "%g",
+                                        ImGuiSliderFlags_NoRoundToFormat);
+      any_update |= ImGui::InputFloat3(
+          "Up", cam_custom.up.v, "%g", ImGuiInputTextFlags_EnterReturnsTrue);
+      any_update |= ImGui::SliderFloat("vFov",
+                                       &cam_custom.vfov,
+                                       0,
+                                       200,
+                                       "%g",
+                                       ImGuiInputTextFlags_EnterReturnsTrue);
+      any_update |= ImGui::SliderFloat("Aperture",
+                                       &cam_custom.aperture,
+                                       0,
+                                       1.0f,
+                                       "%g",
+                                       ImGuiSliderFlags_NoRoundToFormat);
+      any_update |= ImGui::SliderFloat("Focus Distance",
+                                       &cam_custom.focus_distance,
+                                       0,
+                                       200,
+                                       "%g",
+                                       ImGuiSliderFlags_NoRoundToFormat);
+
+      ImGui::Checkbox("Render on GPU on data update", &render_on_gpu_on_data_update);
+
+      ImGui::SeparatorText("Render Buttons");
+      if (ImGui::SmallButton("Render! (CPU+GPU)")) {
+        cam = make_camera(cam_custom);
+
+        total_ray_count = 0;
+        gfx_rt_init_or_panic(gpu_in);
+
+        cpu_end_time = cpu_start_time = os_get_app_uptime();
+        ::free(rt_out.rgba_data.bytes);
+        delete[] rt_out.thread_flags;
+        rt_out = do_ray_tracing(cpu_in);
+
+        gpu_end_time = gpu_start_time = os_get_app_uptime();
+        gfx_rt_start();
+      }
+
+      if (ImGui::SmallButton("Render! (GPU)") ||
+          (render_on_gpu_on_data_update && any_update)) {
+        cam = make_camera(cam_custom);
+
+        gfx_rt_init_or_panic(gpu_in);
+        gpu_end_time = gpu_start_time = os_get_app_uptime();
+        gfx_rt_start();
+      }
     }
     ImGui::End();
 
@@ -162,7 +283,7 @@ main(void) {
 
     clear_temp_mem();
 
-    auto res = (ID3D11ShaderResourceView *)rt_out_as_texture;
+    auto res = (ID3D11ShaderResourceView *)cpu_tex;
     d3d_safe_release_(res);
   }
 

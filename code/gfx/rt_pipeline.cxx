@@ -3,6 +3,10 @@ namespace rt {
 //  Compute shader related types.
 //
 
+
+// All vlaues are "packed" into Vec4s & aligned to 16 bytes on the GPU, so we need 
+// to put them here like that. C/C++ alignment rules are not the same as CS/GPU.
+//
 struct alignas(16) RT_Constants {
   // Quality
   //
@@ -20,6 +24,7 @@ struct alignas(16) RT_Constants {
     f32 lens_radius;
   };
 
+  alignas(16) Vec3 background_color;
   // Camera properties
   //
   alignas(16) Vec3 origin;
@@ -188,13 +193,15 @@ void
 gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
   RT_Constants &rcs = gD3d.rt_pipeline->constants;
 
-  rcs = {.num_samples     = 100,
+  rcs = {.num_samples     = 10,
          .num_reflections = 50,
 
          .num_spheres   = in.w.num_spheres,
          .num_quads     = in.w.num_quads,
          .num_materials = (s32)in.w.materials.size(),
          .lens_radius   = in.c.lens_radius,
+
+         .background_color = in.w.background_color,
 
          .origin            = in.c.origin,
          .horizontal        = in.c.horizontal,

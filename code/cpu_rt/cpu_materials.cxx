@@ -2,7 +2,6 @@ namespace rt {
 /**
  * Helper math functions
  */
-
 [[nodiscard]] Vec3
 reflect(Vec3 v, Vec3 n) {
   return v - n * 2 * dot(v, n);
@@ -71,8 +70,9 @@ scatter_dielectric(Material const &material,
                    Hit_Info const &hi,
                    Vec3           &attenuation_color,
                    Ray            &out) {
-  f32 const refraction_ratio = hi.front_face ? (1.0f / material.dielectric.refraction_index)
-                                             : (material.dielectric.refraction_index);
+  f32 const refraction_ratio = hi.front_face
+                                   ? (1.0f / material.dielectric.refraction_index)
+                                   : (material.dielectric.refraction_index);
 
   Vec3 const unit_direction = normalized(in.direction);
   f32 const  cos_theta      = fmin(dot(unit_direction * -1.f, hi.normal), 1.0);
@@ -137,26 +137,5 @@ emit(Material const &material) {
   }
 
   return {0, 0, 0};
-}
-
-[[nodiscard]] Material
-make_lambertian(Vec3 const &albedo) {
-  return {.type = MaterialType_Lambertian, .lambertian {.albedo = albedo}};
-}
-
-[[nodiscard]] Material
-make_metal(Vec3 const &albedo, f32 fuzz) {
-  return {.type = MaterialType_Metal, .metal {.albedo = albedo, .fuzz = fuzz}};
-}
-
-[[nodiscard]] Material
-make_dielectric(f32 refraction_index) {
-  return {.type = MaterialType_Dielectric,
-          .dielectric {.refraction_index = refraction_index}};
-}
-
-[[nodiscard]] Material
-make_diffuse_light(Vec3 const &albedo) {
-  return {.type = MaterialType_Diffuse_Light, .diffuse_light {.albedo = albedo}};
 }
 } // namespace rt

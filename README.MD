@@ -1,9 +1,9 @@
 # Ray Tracing Engine
-Official title: *"3D objects rendering using ray tracing and collision detection algorithms"*  
+Thesis: *"3D objects rendering using ray tracing and collision detection algorithms"*  
 Supervisor: dr inż. Mateusz Cholewiński
 # About
 This is my final project for engineering degree from *Electronic and Computer Engineering* at *Wroclaw University of Science and Technology* (2023/2024).    
-The goal is to build a renderer which can handle 3D models, lights and materials with
+The goal is to build a renderer which can handle 3D shapes, lights and materials with
 different properties. 
 # Tech  
 The code uses the following tech stack:
@@ -14,9 +14,9 @@ The code uses the following tech stack:
 - ...(will add more as the project evolves)
 
 # Building
+Use CMake to build.
 The project is written in *unity build* philosophy - all files are included into one, big `first.cpp` file, which is then compiled.  
-I'm a fan of simple build scripts - you can find them in `scripts/`. You need to update the MSVC compiler path!  
-After running one, a `build/` directory should appear with the executable in it. Put it inside the "run_tree".
+ Project is extremely simple and self-contained, so there should be no issues. If you encounter any problems, don't hasitate to ask.
 
 # License
 This code is under [MIT license](LICENSE.MD).

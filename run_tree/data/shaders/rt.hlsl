@@ -116,6 +116,7 @@ cbuffer ConstantBuffer : register(b0)
   s32 num_materials;
   f32 cam_lens_radius;
 
+  Vec3 background_color;
   // Camera properties
   //
   Vec3 cam_origin;
@@ -450,7 +451,6 @@ bool hit_scene(const Ray r, float tmin, float tmax, out Hit_Info hi) {
 }
 
 Vec3 ray_color(inout uint rand_seed, Ray r_in, int depth) {
-  const Vec3 background_color = Vec3(0.5, 0.7, 1.0);
   Vec3 final_color = Vec3(1,1,1);
 
   Ray current_ray = r_in;
@@ -460,10 +460,10 @@ Vec3 ray_color(inout uint rand_seed, Ray r_in, int depth) {
       return final_color * background_color;
     }
 
-    Vec3 attenuated_color;
     Vec3 emitted_color = emit(materials[hi.mat_id]);
 
     Ray scattered_ray;
+    Vec3 attenuated_color;
     if (!scatter(rand_seed, materials[hi.mat_id], current_ray, hi, attenuated_color, scattered_ray)) {
       return final_color*emitted_color;
     }

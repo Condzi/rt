@@ -1,12 +1,4 @@
 namespace rt {
-[[nodiscard]] Ray
-make_ray(Vec3 origin, Vec3 direction) {
-  total_ray_count++;
-  return {.origin        = origin,
-          .direction     = direction,
-          .direction_inv = Vec3 {1, 1, 1} / direction};
-}
-
 struct Hit_Info {
   Material_ID mat_id;
   Vec3        p;
@@ -14,11 +6,6 @@ struct Hit_Info {
   f32         t;
   bool        front_face;
 };
-
-[[nodiscard]] Vec3
-at(Ray const &r, f32 t) {
-  return r.origin + r.direction * t;
-}
 
 // 12.4s for 10-10 params
 [[nodiscard]] __forceinline bool
@@ -46,7 +33,7 @@ hit_sphere(Ray const &r, Sphere const &s, f32 t_min, f32 t_max, Hit_Info &hi) {
   if (root == -1) return false;
 
   hi.t = root;
-  hi.p = at(r, root);
+  hi.p = ray_at(r, root);
 
   f32  inv_radius     = 1 / s.radius;
   Vec3 outward_normal = (hi.p - s.center) * inv_radius;
@@ -76,7 +63,7 @@ hit_quad(Ray const &r, Quad const &q, f32 t_min, f32 t_max, Hit_Info &hi) {
     return false;
   }
 
-  Vec3 const intersection_point = at(r, t);
+  Vec3 const intersection_point = ray_at(r, t);
   // Determine the hit point lies within the planar shape using its plane coordinates.
 
   Vec3 const planar_hitpt_vector = intersection_point - q.Q;
@@ -145,42 +132,40 @@ check_possible_contacts_for_collision(World const           &world,
 
 // @Hot
 [[nodiscard]] Vec3
-ray_color(World const &world, Ray const &r, std::vector<BVH_Flat> const& bvh, s32 depth) {
-  // We exceeded ray bounce limit -- no more light is gathered. Scrapping.
-  //
-  if (depth == 0) {
-    return Vec3 {0, 0, 0};
+ray_color(World const                 &world,
+          Ray const                   &starting_ray,
+          std::vector<BVH_Flat> const &bvh,
+          s32                          depth) {
+  Vec3       final_color = Vec3 {1, 1, 1};
+
+  Ray current_ray = starting_ray;
+  for (s32 i = 0; i < depth; i++) {
+    // Broad-phase collision detection
+    //
+    std::vector<Object_ID> contacts = hit_BVH(bvh, current_ray);
+
+    // Narrow-phase
+    //
+    Hit_Info hi;
+    if (!check_possible_contacts_for_collision(
+            world, contacts, current_ray, {.min = 0.001f, .max = FLT_MAX}, hi)) {
+      return final_color * world.background_color;
+    }
+
+    Material const &material = world.materials[hi.mat_id];
+    Vec3 const      emission = emit(material);
+
+    Ray  scattered_ray;
+    Vec3 attenuated_color;
+    if (!scatter(material, current_ray, hi, attenuated_color, scattered_ray)) {
+      return final_color * emission;
+    }
+
+    current_ray = scattered_ray;
+    final_color = (final_color * attenuated_color) + emission;
   }
 
-  Vec3 const background_color {0.5, 0.7, 1.0};
-
-  Hit_Info hi;
-  // Broad-phase collision detection
-  // @Note: 0.001 instead 0 fixes shadow acne
-  //
-  std::vector<Object_ID> contacts = hit_BVH(bvh, r);
-  // Narrow-phase collision detection
-  // No hit -- return background color.
-  //
-  if (!check_possible_contacts_for_collision(
-          world, contacts, r, {.min = 0.001f, .max = FLT_MAX}, hi)) {
-
-    return background_color;
-  }
-
-  Ray  scattered;
-  Vec3 attenuated_color;
-  // @Note: we don't support textures yet, so we emit a solid color.
-  Vec3 emission = emit(world.materials[hi.mat_id]);
-
-  if (!scatter(world.materials[hi.mat_id], r, hi, attenuated_color, scattered)) {
-    return emission;
-  }
-
-  Vec3 color_from_scatter =
-      attenuated_color * ray_color(world, scattered, bvh, depth - 1);
-
-  return emission + color_from_scatter;
+  return Vec3 {0, 0, 0};
 }
 
 s32 constexpr static NUM_CHANNELS = 4;
@@ -201,110 +186,57 @@ get_next_row(s32 max_row) {
 }
 
 void
-rt_loop_balanced(s32               max_row,
-                 s32               image_width,
-                 s32               image_height,
-                 u8               *buffer,
-                 std::vector<BVH_Flat> const& bvh,
-                 Camera           &cam,
-                 std::atomic_bool &thread_flag,
-                 World const      &world) {
-  while (true) {
-    s32 j = get_next_row(max_row);
-    if (j == -1) break;
+rt_loop_balanced(s32                          image_width,
+                 s32                          image_height,
+                 u8                          *buffer,
+                 std::vector<BVH_Flat> const &bvh,
+                 Camera const                &cam,
+                 std::atomic_bool            &thread_flag,
+                 World const                 &world) {
 
-    for (int i = 0; i < image_width; ++i) {
+  for (s32 j = get_next_row(image_height); j != -1; j = get_next_row(image_height)) {
+    for (s32 i = 0; i < image_width; ++i) {
       Vec3 pixel_color = {0, 0, 0};
       for (s32 k = 0; k < SAMPLES_PER_PIXEL; k++) {
         auto u = (f32(i) + random_f32()) / (image_width - 1);
         auto v = (f32(j) + random_f32()) / (image_height - 1);
 
         Ray r       = get_ray_at(cam, u, v);
-        pixel_color = pixel_color + ray_color(world, r, bvh, MAX_DEPTH);
+        pixel_color += ray_color(world, r, bvh, MAX_DEPTH);
       }
 
       pixel_color = pixel_color * COLOR_SCALE;
-      pixel_color = Vec3 {.r = sqrt(pixel_color.r),
-                          .g = sqrt(pixel_color.g),
-                          .b = sqrt(pixel_color.b)};
+      pixel_color = Vec3 {.r = ::sqrt(pixel_color.r),
+                          .g = ::sqrt(pixel_color.g),
+                          .b = ::sqrt(pixel_color.b)};
       pixel_color = clamp_vec3(pixel_color, 0.0f, 0.999f);
 
-      buffer[NUM_CHANNELS * (j * image_width + i)]     = u8(pixel_color.r * 255);
-      buffer[NUM_CHANNELS * (j * image_width + i) + 1] = u8(pixel_color.g * 255);
-      buffer[NUM_CHANNELS * (j * image_width + i) + 2] = u8(pixel_color.b * 255);
-      buffer[NUM_CHANNELS * (j * image_width + i) + 3] = 255;
+      size_t const base_idx = NUM_CHANNELS * (j * image_width + i);
+      buffer[base_idx + 0]  = u8(pixel_color.r * 255);
+      buffer[base_idx + 1]  = u8(pixel_color.g * 255);
+      buffer[base_idx + 2]  = u8(pixel_color.b * 255);
+      buffer[base_idx + 3]  = 255;
     }
   }
 
   thread_flag = true;
 }
 
-[[nodiscard]] Rt_Output
-do_ray_tracing() {
-  f32 const aspect_ratio = 1;
-  s32 const image_width  = 512;
-  s32 const image_height = (s32)(image_width / aspect_ratio);
-
-  // Camera setup
-  //Vec3 const lookfrom {13, 2, 3};
-  //Vec3 const lookat {0, 0, 0};
-  Vec3 const lookat {0, 2, 0};
-  Vec3 const vup {0, 1, 0};
-  f32 const  vfov = 20.0f;
-  // Vec3 const lookfrom {0, 0, 9};
-  Vec3 const lookfrom {26, 3, 6};
-  //f32 const  vfov          = 80.0f;
-  f32 const  dist_to_focus = 15.0f;
-  f32 const  aperture      = 0.1f;
-
-  // Static so it doesn't go out of scope
-  static Camera cam =
-      make_camera(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus);
-
-  // World
-  // Static so it doesn't go out of scope
-  static World w = create_world(WorldType_SimpleLights);
-  // Generate list of BVH_Input based on object IDs.
-  //
-  std::vector<BVH_Input> bvh_input;
-  bvh_input.reserve(w.num_spheres + w.num_quads);
-  for (s32 i = 0; i < w.num_spheres; i++) {
-    Object_ID id {.idx = (u32)i, .type = ObjectType_Sphere};
-    bvh_input.emplace_back(id, w.spheres[i].aabb);
-  }
-  for (s32 i = 0; i < w.num_quads; i++) {
-    Object_ID id {.idx = (u32)i, .type = ObjectType_Quad};
-    bvh_input.emplace_back(id, w.quads[i].aabb);
-  }
-
-  static std::vector<BVH_Flat> bvh =
-      make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
-
-  // @Todo: fix me
-  {
-    static GFX_RT_Input in {
-        .im_size = {(f32)image_width, (f32)image_height}, .w = w, .c = cam};
-    gfx_rt_init_or_panic(in);
-  }
-
-  // Render
+[[nodiscard]] CPU_RT_Output
+do_ray_tracing(CPU_RT_Input const &in) {
+  s32 const image_width  = (s32)in.im_size.width;
+  s32 const image_height = (s32)in.im_size.height;
 
   u8 *buffer = perm<u8>(image_width * image_height * NUM_CHANNELS);
 
   s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
-
+  current_row = 0;
   std::atomic_bool *thread_flags = new std::atomic_bool[num_of_threads_supported];
 
   for (s32 i = 0; i < num_of_threads_supported; i++) {
     std::thread([=] {
-      rt_loop_balanced(image_height,
-                       image_width,
-                       image_height,
-                       buffer,
-                       bvh,
-                       cam,
-                       thread_flags[i],
-                       w);
+      rt_loop_balanced(
+          image_width, image_height, buffer, in.bvh, in.c, thread_flags[i], in.w);
     }).detach();
   }
 
@@ -318,8 +250,4 @@ do_ray_tracing() {
 }
 } // namespace rt
 
-#include "camera.cxx"
-#include "materials.cxx"
-#include "bvh.cxx"
-#include "shapes.cxx"
-#include "world.cxx"
+#include "cpu_materials.cxx"
