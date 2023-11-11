@@ -193,7 +193,7 @@ void
 gfx_rt_set_up_shader_world(GFX_RT_Input const &in) {
   RT_Constants &rcs = gD3d.rt_pipeline->constants;
 
-  rcs = {.num_samples     = 100,
+  rcs = {.num_samples     = 10,
          .num_reflections = 50,
 
          .num_spheres   = in.w.num_spheres,

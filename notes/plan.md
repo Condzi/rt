@@ -39,14 +39,14 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
   - [X] Quads
   - [X] Working lights example
 
-- [ ] Cleanup / refactor, in preparation for Extras
+- [X] Cleanup / refactor, in preparation for Extras
   - [X] use iterative version of ray_color
   - [X] move out the common code from cpu_rt to rt_base
   - [X] separate cpu_rt from gfx rt creation
-  - [ ] refactor the code so it is possible to set parameters in gui before rendering
-    - [ ] Camera parameters gui
-    - [ ] "Render" GUI button
-    
+  - [X] refactor the code so it is possible to set parameters in gui before rendering
+    - [X] Camera parameters gui
+    - [X] "Render" GUI button
+
 - [ ] Extra
   - [ ] API for the engine so other applications can use this renderer
   - [ ] use iGPU for ImGui and stuff, and dedicated for RT so it wont hang

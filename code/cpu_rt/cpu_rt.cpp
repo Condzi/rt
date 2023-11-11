@@ -230,6 +230,7 @@ do_ray_tracing(CPU_RT_Input const &in) {
   u8 *buffer = perm<u8>(image_width * image_height * NUM_CHANNELS);
 
   s32 const num_of_threads_supported = (s32)std::thread::hardware_concurrency();
+  current_row = 0;
   std::atomic_bool *thread_flags = new std::atomic_bool[num_of_threads_supported];
 
   for (s32 i = 0; i < num_of_threads_supported; i++) {
