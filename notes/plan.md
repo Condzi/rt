@@ -48,19 +48,21 @@ Ray Tracing in One Weekend? Can I combine them somehow to get something better?
     - [X] "Render" GUI button
 
 - [ ] Extra
-  - [ ] API for the engine so other applications can use this renderer
-  - [ ] use iGPU for ImGui and stuff, and dedicated for RT so it wont hang
-  - [ ] moving camera using on-screen controls
+  - [ ] Textures
   - [ ] 3D models
     - [ ] Ray-Triangle intersection (see materials.md)
     - [ ] Naive triangle rendering
     - [ ] .obj parser or something
-- [ ] Denoising (see materials.md)?
-  - adaptive sampling? https://blog.yiningkarlli.com/2015/03/adaptive-sampling.html
-- [ ] Editor?
-- [ ] Rendering gifs? (Simple moving camera would be cool)
-- [ ] portfolio with custom scenes showcasing all features
-- [ ] regression tests (https://blog.yiningkarlli.com/2021/05/porting-takua-to-arm-pt1.html)
-  - [ ] compare multisampled images between each other (with some differences because of floating point errors)
-  - [ ] compare single-sample images (only for the same platform) 
-- [ ] priority based dielectircs
+  - [ ] Denoising (see materials.md)?
+    - adaptive sampling? https://blog.yiningkarlli.com/2015/03/adaptive-sampling.html
+  - [ ] regression tests (https://blog.yiningkarlli.com/2021/05/porting-takua-to-arm-pt1.html)
+    - [ ] compare multisampled images between each other (with some differences because of floating point errors)
+    - [ ] compare single-sample images (only for the same platform) 
+  - [ ] Editor?
+  - [ ] portfolio with custom scenes showcasing all features
+  - [ ] real camera simulation (pinhole etc)
+  - [ ] API for the engine so other applications can use this renderer
+  - [ ] Rendering gifs? (Simple moving camera would be cool)
+  - [ ] priority based dielectircs
+  - [ ] use iGPU for ImGui and stuff, and dedicated for RT so it wont hang
+
