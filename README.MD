@@ -14,7 +14,7 @@ The code uses the following tech stack:
 - ...(will add more as the project evolves)
 
 # Building
-Use CMake to build. Currently the app assumes that it works in `W:\\pwr\engineering-thesis\\rt\\run_tree`.
+Use CMake to build.
 The project is written in *unity build* philosophy - all files are included into one, big `first.cpp` file, which is then compiled.  
  Project is extremely simple and self-contained, so there should be no issues. If you encounter any problems, don't hasitate to ask.
 
