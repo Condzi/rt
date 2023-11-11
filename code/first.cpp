@@ -60,8 +60,6 @@ errf(char const *fmt, TArgs... args) {
 
 int
 main(void) {
-  World_Type const world_type = WorldType_SimpleLights;
-
   gLog_File = fopen(RT_LOG_FILE, "w");
 
   logf("Logger initialized!\n");
@@ -82,6 +80,12 @@ main(void) {
   f32 const aspect_ratio = 1;
   s32 const image_width  = 512;
   s32 const image_height = (s32)(image_width / aspect_ratio);
+
+  // World
+  //
+  World_Type            world_type = WorldType_SimpleLights;
+  World                 w          = create_world(world_type);
+  std::vector<BVH_Flat> bvh        = world_create_bvh(w);
 
   // Camera setup
   //
@@ -119,24 +123,6 @@ main(void) {
   cam_custom                    = camera_presets[world_type];
 
   Camera cam = make_camera(cam_custom);
-
-  // World
-  World w = create_world(world_type);
-  // Generate list of BVH_Input based on object IDs.
-  //
-  std::vector<BVH_Input> bvh_input;
-  bvh_input.reserve(w.num_spheres + w.num_quads);
-  for (s32 i = 0; i < w.num_spheres; i++) {
-    Object_ID id {.idx = (u32)i, .type = ObjectType_Sphere};
-    bvh_input.emplace_back(id, w.spheres[i].aabb);
-  }
-  for (s32 i = 0; i < w.num_quads; i++) {
-    Object_ID id {.idx = (u32)i, .type = ObjectType_Quad};
-    bvh_input.emplace_back(id, w.quads[i].aabb);
-  }
-
-  std::vector<BVH_Flat> bvh =
-      make_BVH(bvh_input.data(), 0, (s32)bvh_input.size(), w.aabb);
 
   // Common RT Setup end
 
@@ -218,35 +204,56 @@ main(void) {
     ImGui::End();
 
     if (ImGui::Begin("Controls")) {
+      ImGui::SeparatorText("Preset Selector");
+      char const *items[WorldType__count] = {"Book 1", "Quads", "Simple Lights"};
+      static int  item_current            = 1;
+      if (ImGui::ListBox("#select_world", &item_current, items, WorldType__count)) {
+        w          = create_world((World_Type)item_current);
+        bvh        = world_create_bvh(w);
+        cam_custom = camera_presets[item_current];
+      }
+
+      ImGui::SeparatorText("Camera Controls");
       static bool render_on_gpu_on_data_update = true;
       bool        any_update                   = false;
 
-      any_update |= ImGui::InputFloat3(
-          "Center", cam_custom.center.v, "%g", ImGuiInputTextFlags_EnterReturnsTrue);
-      any_update |= ImGui::InputFloat3("Look At",
-                                       cam_custom.look_at.v,
-                                       "%g",
-                                       ImGuiInputTextFlags_EnterReturnsTrue);
+      any_update |= ImGui::SliderFloat3("Center",
+                                        cam_custom.center.v,
+                                        -50,
+                                        50,
+                                        "%g",
+                                        ImGuiSliderFlags_NoRoundToFormat);
+      any_update |= ImGui::SliderFloat3("Look At",
+                                        cam_custom.look_at.v,
+                                        -50,
+                                        50,
+                                        "%g",
+                                        ImGuiSliderFlags_NoRoundToFormat);
       any_update |= ImGui::InputFloat3(
           "Up", cam_custom.up.v, "%g", ImGuiInputTextFlags_EnterReturnsTrue);
-      any_update |= ImGui::InputFloat(
-          "vFov", &cam_custom.vfov, 0, 0, "%g", ImGuiInputTextFlags_EnterReturnsTrue);
-      any_update |= ImGui::InputFloat("Aperture",
-                                      &cam_custom.aperture,
-                                      0,
-                                      0,
-                                      "%g",
-                                      ImGuiInputTextFlags_EnterReturnsTrue);
-      any_update |= ImGui::InputFloat("Focus Distance",
-                                      &cam_custom.focus_distance,
-                                      0,
-                                      0,
-                                      "%g",
-                                      ImGuiInputTextFlags_EnterReturnsTrue);
+      any_update |= ImGui::SliderFloat("vFov",
+                                       &cam_custom.vfov,
+                                       0,
+                                       200,
+                                       "%g",
+                                       ImGuiInputTextFlags_EnterReturnsTrue);
+      any_update |= ImGui::SliderFloat("Aperture",
+                                       &cam_custom.aperture,
+                                       0,
+                                       1.0f,
+                                       "%g",
+                                       ImGuiSliderFlags_NoRoundToFormat);
+      any_update |= ImGui::SliderFloat("Focus Distance",
+                                       &cam_custom.focus_distance,
+                                       0,
+                                       200,
+                                       "%g",
+                                       ImGuiSliderFlags_NoRoundToFormat);
 
       ImGui::Checkbox("Render on GPU on data update", &render_on_gpu_on_data_update);
 
-      if (ImGui::SmallButton("Render!")) {
+      ImGui::SeparatorText("Render Buttons");
+      if (ImGui::SmallButton("Render! (CPU+GPU)")) {
         cam = make_camera(cam_custom);
 
         total_ray_count = 0;
@@ -261,7 +268,7 @@ main(void) {
         gfx_rt_start();
       }
 
-      if (ImGui::SmallButton("Render on GPU!") ||
+      if (ImGui::SmallButton("Render! (GPU)") ||
           (render_on_gpu_on_data_update && any_update)) {
         cam = make_camera(cam_custom);
 

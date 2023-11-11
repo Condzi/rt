@@ -23,6 +23,9 @@ enum World_Type {
 [[nodiscard]] World
 create_world(World_Type type);
 
+[[nodiscard]] std::vector<BVH_Flat>
+world_create_bvh(World const &w);
+
 void
 add_sphere(World &w, Sphere s, Material *mat);
 
